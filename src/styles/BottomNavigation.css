@@ -1,0 +1,63 @@
+.bottom-navigation {
+  position: fixed;
+  z-index: 900;
+  right: 0;
+  bottom: 0;
+  left: 0;
+
+  width: 100%;
+  max-width: 520px;
+  min-height: 72px;
+  margin: 0 auto;
+  padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
+
+  border-top: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  box-shadow: 0 -10px 35px rgba(15, 23, 42, 0.08);
+}
+
+.bottom-navigation-item {
+  min-width: 0;
+  min-height: 52px;
+  padding: 5px 2px;
+
+  border: 0;
+  border-radius: 14px;
+  background: transparent;
+  color: var(--text-muted);
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+
+  cursor: pointer;
+  transition:
+    color 0.18s ease,
+    background 0.18s ease,
+    transform 0.18s ease;
+}
+
+.bottom-navigation-item span {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 10px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bottom-navigation-item.active {
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+
+.bottom-navigation-item:active {
+  transform: scale(0.94);
+}

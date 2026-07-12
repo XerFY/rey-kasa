@@ -2,24 +2,17 @@ import {
   useEffect,
   useRef,
   useState,
-  type CSSProperties,
   type FormEvent,
 } from "react";
 import { X } from "lucide-react";
-import "../styles/Modal.css";
 
-type TransactionType = "income" | "expense";
+import "../styles/Modal.css";
 
 type Props = {
   open: boolean;
-  type: TransactionType;
+  type: "income" | "expense";
   onClose: () => void;
-  onSave: (amount: number, description: string) => void;
-};
-
-type ModalViewportStyle = CSSProperties & {
-  "--modal-height": string;
-  "--modal-top": string;
+  onSave: (amount: number, description: string) => void | Promise<void>;
 };
 
 function AddTransactionModal({
@@ -31,169 +24,109 @@ function AddTransactionModal({
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
 
-  const [viewport, setViewport] = useState({
-    height: window.innerHeight,
-    top: 0,
-  });
-
-  const amountInputRef = useRef<HTMLInputElement>(null);
+  const sheetRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
-    if (!open) {
-      return;
-    }
+    if (!open) return;
 
     setAmount("");
     setDescription("");
 
-    const scrollY = window.scrollY;
-
-    const oldOverflow = document.body.style.overflow;
-    const oldPosition = document.body.style.position;
-    const oldTop = document.body.style.top;
-    const oldWidth = document.body.style.width;
-
+    const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    document.body.style.position = "fixed";
-    document.body.style.top = `-${scrollY}px`;
-    document.body.style.width = "100%";
 
-    function updateViewport() {
-      const visualViewport = window.visualViewport;
+    function updateKeyboardHeight() {
+      const viewport = window.visualViewport;
 
-      if (visualViewport) {
-        setViewport({
-          height: visualViewport.height,
-          top: visualViewport.offsetTop,
-        });
+      if (!viewport) return;
 
-        return;
-      }
+      const keyboardHeight =
+        window.innerHeight - viewport.height - viewport.offsetTop;
 
-      setViewport({
-        height: window.innerHeight,
-        top: 0,
-      });
+      document.documentElement.style.setProperty(
+        "--keyboard-height",
+        `${Math.max(0, keyboardHeight)}px`
+      );
     }
 
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    }
-
-    updateViewport();
-
-    window.addEventListener("resize", updateViewport);
-    window.addEventListener("orientationchange", updateViewport);
-    window.addEventListener("keydown", handleKeyDown);
+    updateKeyboardHeight();
 
     window.visualViewport?.addEventListener(
       "resize",
-      updateViewport
+      updateKeyboardHeight
     );
 
     window.visualViewport?.addEventListener(
       "scroll",
-      updateViewport
+      updateKeyboardHeight
     );
 
     return () => {
-      window.removeEventListener("resize", updateViewport);
-      window.removeEventListener(
-        "orientationchange",
-        updateViewport
+      document.body.style.overflow = previousOverflow;
+
+      document.documentElement.style.setProperty(
+        "--keyboard-height",
+        "0px"
       );
-      window.removeEventListener("keydown", handleKeyDown);
 
       window.visualViewport?.removeEventListener(
         "resize",
-        updateViewport
+        updateKeyboardHeight
       );
 
       window.visualViewport?.removeEventListener(
         "scroll",
-        updateViewport
+        updateKeyboardHeight
       );
-
-      document.body.style.overflow = oldOverflow;
-      document.body.style.position = oldPosition;
-      document.body.style.top = oldTop;
-      document.body.style.width = oldWidth;
-
-      window.scrollTo(0, scrollY);
     };
-  }, [open, onClose]);
+  }, [open]);
 
-  if (!open) {
-    return null;
-  }
+  if (!open) return null;
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const normalizedAmount = amount
-      .trim()
-      .replace(/\s/g, "")
+      .replace(/\./g, "")
       .replace(",", ".");
 
     const numericAmount = Number(normalizedAmount);
 
-    if (
-      !Number.isFinite(numericAmount) ||
-      numericAmount <= 0
-    ) {
-      amountInputRef.current?.focus();
+    if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
       return;
     }
 
-    onSave(
+    await onSave(
       numericAmount,
-      description.trim() ||
-        (type === "income" ? "Gelir" : "Gider")
+      description.trim() || (type === "income" ? "Gelir" : "Gider")
     );
   }
 
-  const modalStyle: ModalViewportStyle = {
-    "--modal-height": `${viewport.height}px`,
-    "--modal-top": `${viewport.top}px`,
-  };
+  function handleInputFocus() {
+    window.setTimeout(() => {
+      sheetRef.current?.scrollTo({
+        top: sheetRef.current.scrollHeight,
+        behavior: "smooth",
+      });
+    }, 250);
+  }
 
   return (
-    <div
-      className="modal-overlay"
-      style={modalStyle}
-      role="presentation"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) {
-          onClose();
-        }
-      }}
-    >
+    <div className="modal-overlay" onClick={onClose}>
       <section
+        ref={sheetRef}
         className="modal-sheet"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="transaction-modal-title"
+        onClick={(event) => event.stopPropagation()}
       >
-        <div
-          className="modal-handle"
-          aria-hidden="true"
-        />
+        <div className="modal-handle" />
 
         <div className="modal-header">
           <div>
             <span className="modal-label">
-              {type === "income"
-                ? "Para Girişi"
-                : "Para Çıkışı"}
+              {type === "income" ? "Para Girişi" : "Para Çıkışı"}
             </span>
 
-            <h2 id="transaction-modal-title">
-              {type === "income"
-                ? "Gelir Ekle"
-                : "Gider Ekle"}
-            </h2>
+            <h2>{type === "income" ? "Gelir Ekle" : "Gider Ekle"}</h2>
           </div>
 
           <button
@@ -206,15 +139,9 @@ function AddTransactionModal({
           </button>
         </div>
 
-        <form
-          className="transaction-form"
-          onSubmit={handleSubmit}
-        >
-          <div className="modal-scroll-area">
-            <label
-              className="field-label"
-              htmlFor="amount"
-            >
+        <form onSubmit={handleSubmit}>
+          <div className="modal-fields">
+            <label className="field-label" htmlFor="amount">
               Tutar
             </label>
 
@@ -222,41 +149,32 @@ function AddTransactionModal({
               <span>₺</span>
 
               <input
-                ref={amountInputRef}
                 id="amount"
-                name="amount"
                 type="text"
                 inputMode="decimal"
-                enterKeyHint="next"
-                autoComplete="off"
                 placeholder="0,00"
                 value={amount}
-                onChange={(event) =>
-                  setAmount(event.target.value)
-                }
+                onChange={(event) => setAmount(event.target.value)}
+                onFocus={handleInputFocus}
+                autoComplete="off"
+                autoFocus
               />
             </div>
 
-            <label
-              className="field-label"
-              htmlFor="description"
-            >
+            <label className="field-label" htmlFor="description">
               Açıklama
             </label>
 
             <input
               id="description"
-              name="description"
               className="description-field"
               type="text"
-              enterKeyHint="done"
-              autoComplete="off"
               placeholder="İşlem açıklaması"
               value={description}
-              onChange={(event) =>
-                setDescription(event.target.value)
-              }
+              onChange={(event) => setDescription(event.target.value)}
+              onFocus={handleInputFocus}
               maxLength={80}
+              autoComplete="off"
             />
           </div>
 
@@ -264,9 +182,7 @@ function AddTransactionModal({
             <button
               type="submit"
               className={`save-button ${
-                type === "income"
-                  ? "save-income"
-                  : "save-expense"
+                type === "income" ? "save-income" : "save-expense"
               }`}
             >
               Kaydet

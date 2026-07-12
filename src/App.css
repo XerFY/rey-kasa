@@ -163,3 +163,43 @@ button {
   cursor: pointer;
   box-shadow: var(--shadow);
 }
+.app {
+  padding-bottom: calc(105px + env(safe-area-inset-bottom));
+}
+
+.section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.section-heading h3 {
+  margin-bottom: 0;
+}
+
+.text-button {
+  border: 0;
+  background: transparent;
+  color: var(--primary);
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.page-section {
+  padding-top: 10px;
+}
+
+.page-section h1 {
+  color: var(--text);
+  font-size: 30px;
+  font-weight: 800;
+}
+
+.page-description {
+  margin: 7px 0 24px;
+  color: var(--text-secondary);
+  font-size: 14px;
+}

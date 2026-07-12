@@ -1,10 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
-import { Minus, Plus, Receipt } from "lucide-react";
+
 import "./App.css";
 
-import Header from "./components/Header";
-import BalanceCard from "./components/BalanceCard";
 import AddTransactionModal from "./components/AddTransactionModal";
+import BottomNavigation, {
+  type AppPage,
+} from "./components/BottomNavigation";
+import DayEndModal from "./components/DayEndModal";
+
+import HomePage from "./pages/HomePage";
+import ReportsPage from "./pages/ReportsPage";
+import SettingsPage from "./pages/SettingsPage";
+import TransactionsPage from "./pages/TransactionsPage";
 
 import {
   connectFirebase,
@@ -16,9 +23,23 @@ import type { Transaction } from "./types/Transaction";
 
 type TransactionType = "income" | "expense";
 
+function isSameDay(timestamp: number, targetDate: Date): boolean {
+  const date = new Date(timestamp);
+
+  return (
+    date.getDate() === targetDate.getDate() &&
+    date.getMonth() === targetDate.getMonth() &&
+    date.getFullYear() === targetDate.getFullYear()
+  );
+}
+
 function App() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [modalOpen, setModalOpen] = useState(false);
+  const [activePage, setActivePage] = useState<AppPage>("home");
+
+  const [transactionModalOpen, setTransactionModalOpen] = useState(false);
+  const [dayEndModalOpen, setDayEndModalOpen] = useState(false);
+
   const [transactionType, setTransactionType] =
     useState<TransactionType>("income");
 
@@ -37,38 +58,28 @@ function App() {
 
         await connectFirebase();
 
-        if (!mounted) {
-          return;
-        }
+        if (!mounted) return;
 
         unsubscribe = listenTransactions(
           (firebaseTransactions) => {
-            if (!mounted) {
-              return;
-            }
+            if (!mounted) return;
 
             setTransactions(firebaseTransactions);
             setLoading(false);
             setSyncError("");
           },
           (error) => {
+            if (!mounted) return;
+
             console.error("Firestore dinleme hatası:", error);
-
-            if (!mounted) {
-              return;
-            }
-
             setLoading(false);
             setSyncError(`Bulut bağlantı hatası: ${error.message}`);
           }
         );
       } catch (error) {
+        if (!mounted) return;
+
         console.error("Firebase başlatma hatası:", error);
-
-        if (!mounted) {
-          return;
-        }
-
         setLoading(false);
 
         setSyncError(
@@ -89,26 +100,18 @@ function App() {
 
   const balance = useMemo(() => {
     return transactions.reduce((total, transaction) => {
-      if (transaction.type === "income") {
-        return total + transaction.amount;
-      }
-
-      return total - transaction.amount;
+      return transaction.type === "income"
+        ? total + transaction.amount
+        : total - transaction.amount;
     }, 0);
   }, [transactions]);
 
-  const todayTransactionCount = useMemo(() => {
+  const todayTransactions = useMemo(() => {
     const today = new Date();
 
-    return transactions.filter((transaction) => {
-      const transactionDate = new Date(transaction.createdAt);
-
-      return (
-        transactionDate.getDate() === today.getDate() &&
-        transactionDate.getMonth() === today.getMonth() &&
-        transactionDate.getFullYear() === today.getFullYear()
-      );
-    }).length;
+    return transactions.filter((transaction) =>
+      isSameDay(transaction.createdAt, today)
+    );
   }, [transactions]);
 
   const lastUpdate =
@@ -121,18 +124,16 @@ function App() {
         })
       : "Henüz işlem yok";
 
-  function openModal(type: TransactionType) {
+  function openTransactionModal(type: TransactionType) {
     setTransactionType(type);
-    setModalOpen(true);
+    setTransactionModalOpen(true);
     setSyncError("");
   }
 
-  function closeModal() {
-    if (saving) {
-      return;
+  function closeTransactionModal() {
+    if (!saving) {
+      setTransactionModalOpen(false);
     }
-
-    setModalOpen(false);
   }
 
   async function saveTransaction(
@@ -143,126 +144,85 @@ function App() {
       setSaving(true);
       setSyncError("");
 
-      const transaction = {
+      await createTransaction({
         type: transactionType,
         amount,
         description,
         createdAt: Date.now(),
-      };
+      });
 
-      console.log("Firebase'e gönderiliyor:", transaction);
-
-      await createTransaction(transaction);
-
-      console.log("Firebase'e kaydedildi.");
-
-      setModalOpen(false);
+      setTransactionModalOpen(false);
     } catch (error) {
       console.error("İşlem kaydetme hatası:", error);
 
-      const message =
-        error instanceof Error ? error.message : "Bilinmeyen hata";
-
-      setSyncError(`İşlem kaydedilemedi: ${message}`);
-      window.alert(`İşlem kaydedilemedi:\n${message}`);
+      setSyncError(
+        error instanceof Error
+          ? `İşlem kaydedilemedi: ${error.message}`
+          : "İşlem kaydedilemedi."
+      );
     } finally {
       setSaving(false);
     }
   }
 
+  function renderPage() {
+    if (activePage === "home") {
+      return (
+        <HomePage
+          transactions={transactions}
+          loading={loading}
+          saving={saving}
+          syncError={syncError}
+          balance={balance}
+          todayTransactionCount={todayTransactions.length}
+          lastUpdate={lastUpdate}
+          onAddIncome={() => openTransactionModal("income")}
+          onAddExpense={() => openTransactionModal("expense")}
+          onShowAllTransactions={() => setActivePage("transactions")}
+          onDayEnd={() => setDayEndModalOpen(true)}
+        />
+      );
+    }
+
+    if (activePage === "transactions") {
+      return (
+        <TransactionsPage
+          transactions={transactions}
+          loading={loading}
+        />
+      );
+    }
+
+    if (activePage === "reports") {
+      return <ReportsPage />;
+    }
+
+    return <SettingsPage />;
+  }
+
   return (
-    <main className="app">
-      <Header />
+    <>
+      <main className="app">{renderPage()}</main>
 
-      <div className={`sync-status ${syncError ? "sync-error" : ""}`}>
-        {syncError
-          ? syncError
-          : loading
-            ? "Buluta bağlanıyor..."
-            : "● Bulut senkronize"}
-      </div>
-
-      <BalanceCard
-        balance={balance}
-        transactionCount={todayTransactionCount}
-        lastUpdate={lastUpdate}
+      <BottomNavigation
+        activePage={activePage}
+        onChange={setActivePage}
       />
-
-      <div className="buttons">
-        <button
-          type="button"
-          className="income"
-          onClick={() => openModal("income")}
-          disabled={saving}
-        >
-          <Plus size={21} />
-          Gelir Ekle
-        </button>
-
-        <button
-          type="button"
-          className="expense"
-          onClick={() => openModal("expense")}
-          disabled={saving}
-        >
-          <Minus size={21} />
-          Gider Ekle
-        </button>
-      </div>
-
-      <section className="transactions">
-        <h3>Son İşlemler</h3>
-
-        {loading ? (
-          <div className="empty">İşlemler yükleniyor...</div>
-        ) : transactions.length === 0 ? (
-          <div className="empty">Henüz işlem bulunmuyor.</div>
-        ) : (
-          transactions.map((transaction) => (
-            <article className="transaction-item" key={transaction.id}>
-              <div>
-                <strong
-                  className={
-                    transaction.type === "income"
-                      ? "income-text"
-                      : "expense-text"
-                  }
-                >
-                  {transaction.type === "income" ? "+" : "-"} ₺
-                  {transaction.amount.toLocaleString("tr-TR", {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
-                </strong>
-
-                <p>{transaction.description}</p>
-              </div>
-
-              <time dateTime={new Date(transaction.createdAt).toISOString()}>
-                {new Date(transaction.createdAt).toLocaleString("tr-TR", {
-                  day: "2-digit",
-                  month: "2-digit",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-              </time>
-            </article>
-          ))
-        )}
-      </section>
-
-      <button type="button" className="day-end">
-        <Receipt size={21} />
-        Gün Sonu
-      </button>
 
       <AddTransactionModal
-        open={modalOpen}
+        open={transactionModalOpen}
         type={transactionType}
-        onClose={closeModal}
+        onClose={closeTransactionModal}
         onSave={saveTransaction}
       />
-    </main>
+
+      <DayEndModal
+        open={dayEndModalOpen}
+        transactions={todayTransactions}
+        balance={balance}
+        onClose={() => setDayEndModalOpen(false)}
+      />
+    </>
   );
 }
 

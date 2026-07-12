@@ -1,0 +1,281 @@
+.day-end-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.58);
+  backdrop-filter: blur(9px);
+  -webkit-backdrop-filter: blur(9px);
+}
+
+.day-end-modal {
+  width: 100%;
+  max-width: 520px;
+  max-height: 94dvh;
+  overflow-y: auto;
+  padding: 24px 18px calc(24px + env(safe-area-inset-bottom));
+  border: 1px solid var(--border);
+  border-bottom: 0;
+  border-radius: 28px 28px 0 0;
+  background: var(--background);
+  color: var(--text);
+  box-shadow: 0 -24px 70px rgba(15, 23, 42, 0.2);
+  animation: day-end-open 0.25s ease;
+  -webkit-overflow-scrolling: touch;
+}
+
+.day-end-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+.day-end-header span {
+  color: var(--primary);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.7px;
+}
+
+.day-end-header h2 {
+  margin-top: 4px;
+  color: var(--text);
+  font-size: 25px;
+  font-weight: 800;
+}
+
+.day-end-header p {
+  margin-top: 5px;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.day-end-close {
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  color: var(--text-secondary);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.day-end-summary {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 11px;
+}
+
+.summary-card {
+  min-width: 0;
+  padding: 15px;
+  border: 1px solid var(--border);
+  border-radius: 17px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.summary-card span {
+  display: block;
+  margin-bottom: 7px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.summary-card strong {
+  display: block;
+  overflow-wrap: anywhere;
+  color: var(--text);
+  font-size: 16px;
+  line-height: 1.25;
+}
+
+.income-summary strong,
+.positive {
+  color: var(--success);
+}
+
+.expense-summary strong,
+.negative {
+  color: var(--danger);
+}
+
+.balance-summary {
+  border-color: color-mix(
+    in srgb,
+    var(--primary) 45%,
+    var(--border)
+  );
+}
+
+.balance-summary strong {
+  color: var(--primary);
+}
+
+.day-end-transactions {
+  margin-top: 25px;
+}
+
+.day-end-section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+
+.day-end-section-title h3 {
+  color: var(--text);
+  font-size: 17px;
+}
+
+.day-end-section-title span {
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.day-end-list {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.day-end-transaction {
+  padding: 13px 14px;
+  border: 1px solid var(--border);
+  border-radius: 15px;
+  background: var(--surface);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.day-end-transaction strong {
+  display: block;
+  overflow-wrap: anywhere;
+  font-size: 15px;
+}
+
+.day-end-transaction p {
+  margin-top: 4px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.day-end-transaction time {
+  flex-shrink: 0;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.day-end-income {
+  color: var(--success);
+}
+
+.day-end-expense {
+  color: var(--danger);
+}
+
+.day-end-empty {
+  padding: 20px;
+  border: 1px dashed var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+  color: var(--text-secondary);
+  text-align: center;
+  font-size: 13px;
+}
+
+.day-end-actions {
+  position: sticky;
+  bottom: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 11px;
+  margin-top: 24px;
+  padding-top: 12px;
+  background: var(--background);
+}
+
+.day-end-actions button {
+  min-height: 54px;
+  border-radius: 17px;
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.day-end-print {
+  border: 1px solid var(--primary);
+  background: var(--surface);
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.day-end-finish {
+  border: 1px solid var(--primary);
+  background: var(--primary);
+  color: #ffffff;
+}
+
+@keyframes day-end-open {
+  from {
+    transform: translateY(100%);
+  }
+
+  to {
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 380px) {
+  .day-end-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .day-end-actions {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  .day-end-modal,
+  .day-end-modal * {
+    visibility: visible;
+  }
+
+  .day-end-modal {
+    position: absolute;
+    inset: 0;
+    max-width: none;
+    max-height: none;
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    background: #ffffff;
+    color: #000000;
+  }
+
+  .day-end-close,
+  .day-end-actions {
+    display: none;
+  }
+}

@@ -16,8 +16,8 @@ export default defineConfig({
         short_name: "REY KASA",
         description: "Kasa Yönetim Sistemi",
 
-        theme_color: "#0F1115",
-        background_color: "#0F1115",
+        theme_color: "#c79a2b",
+        background_color: "#eef2f6",
 
         display: "standalone",
         orientation: "portrait",
