@@ -1,0 +1,249 @@
+.day-end-history {
+  margin-top: 30px;
+}
+
+.history-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  margin-bottom: 13px;
+}
+
+.history-heading > div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.history-heading svg {
+  color: var(--primary);
+}
+
+.history-heading h2 {
+  color: var(--text);
+  font-size: 17px;
+  font-weight: 850;
+}
+
+.history-heading > span {
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+
+.history-card {
+  overflow: hidden;
+
+  border: 1px solid var(--border);
+  border-radius: 19px;
+
+  background: var(--surface);
+
+  box-shadow: var(--shadow);
+}
+
+.history-card-header {
+  width: 100%;
+  min-height: 70px;
+
+  padding: 14px;
+
+  border: 0;
+
+  background: transparent;
+  color: var(--text);
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 13px;
+
+  text-align: left;
+  cursor: pointer;
+}
+
+.history-card-header > div:first-child {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.history-card-header strong {
+  font-size: 15px;
+}
+
+.history-card-header small {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.history-header-right {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.history-header-right b {
+  color: var(--primary);
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.history-header-right svg {
+  color: var(--text-muted);
+}
+
+.history-quick-summary {
+  padding: 10px 14px;
+
+  border-top: 1px solid var(--border);
+
+  background: var(--surface-soft);
+
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.history-quick-summary span:last-child {
+  color: var(--text-secondary);
+}
+
+.history-income {
+  color: var(--success);
+}
+
+.history-expense {
+  color: var(--danger);
+}
+
+.history-details {
+  padding: 14px;
+
+  border-top: 1px solid var(--border);
+}
+
+.history-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.history-summary-grid > div {
+  min-width: 0;
+  padding: 10px;
+
+  border: 1px solid var(--border);
+  border-radius: 13px;
+
+  background: var(--surface-soft);
+
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.history-summary-grid span {
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.history-summary-grid strong {
+  overflow-wrap: anywhere;
+  font-size: 12px;
+}
+
+.history-transactions {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+
+  margin-top: 14px;
+}
+
+.history-transaction {
+  padding: 10px 0;
+
+  border-bottom: 1px solid var(--border);
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.history-transaction > div {
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.history-transaction strong {
+  overflow: hidden;
+
+  color: var(--text);
+
+  font-size: 12px;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.history-transaction time {
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.history-transaction b {
+  flex-shrink: 0;
+  font-size: 12px;
+}
+
+.history-print {
+  width: 100%;
+  min-height: 50px;
+
+  margin-top: 15px;
+
+  border: 1px solid var(--primary);
+  border-radius: 15px;
+
+  background: var(--primary);
+  color: #ffffff;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  font-size: 14px;
+  font-weight: 800;
+
+  cursor: pointer;
+}
+
+.history-empty {
+  padding: 22px;
+
+  border: 1px dashed var(--border);
+  border-radius: 16px;
+
+  background: var(--surface);
+  color: var(--text-secondary);
+
+  text-align: center;
+  font-size: 13px;
+}

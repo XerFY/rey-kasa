@@ -718,10 +718,9 @@ const todayAlreadyArchived =
     ) {
       return (
         <ReportsPage
-          transactions={
-            transactions
-          }
-        />
+  transactions={transactions}
+  dayEnds={dayEnds}
+/>
       );
     }
 

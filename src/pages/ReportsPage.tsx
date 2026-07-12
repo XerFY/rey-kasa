@@ -4,11 +4,22 @@ import {
   CalendarDays,
   Wallet,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import {
+  useMemo,
+  useState,
+} from "react";
 
 import "../styles/ReportsPage.css";
 
-import type { Transaction } from "../types/Transaction";
+import DayEndHistory from "../components/DayEndHistory";
+
+import type {
+  DayEndRecord,
+} from "../types/DayEndRecord";
+
+import type {
+  Transaction,
+} from "../types/Transaction";
 
 type ReportPeriod =
   | "daily"
@@ -17,13 +28,19 @@ type ReportPeriod =
 
 type Props = {
   transactions: Transaction[];
+  dayEnds: DayEndRecord[];
 };
 
-function formatMoney(amount: number): string {
-  return amount.toLocaleString("tr-TR", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
+function formatMoney(
+  amount: number
+): string {
+  return amount.toLocaleString(
+    "tr-TR",
+    {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }
+  );
 }
 
 function getPeriodStart(
@@ -61,14 +78,21 @@ function getPeriodStart(
 
 function ReportsPage({
   transactions,
+  dayEnds,
 }: Props) {
-  const [period, setPeriod] =
-    useState<ReportPeriod>("daily");
+  const [
+    period,
+    setPeriod,
+  ] = useState<ReportPeriod>(
+    "daily"
+  );
 
   const reportTransactions =
     useMemo(() => {
       const periodStart =
-        getPeriodStart(period).getTime();
+        getPeriodStart(
+          period
+        ).getTime();
 
       return transactions.filter(
         (transaction) =>
@@ -77,31 +101,37 @@ function ReportsPage({
       );
     }, [period, transactions]);
 
-  const totalIncome = useMemo(() => {
-    return reportTransactions
-      .filter(
-        (transaction) =>
-          transaction.type === "income"
-      )
-      .reduce(
-        (total, transaction) =>
-          total + transaction.amount,
-        0
-      );
-  }, [reportTransactions]);
+  const totalIncome =
+    useMemo(() => {
+      return reportTransactions
+        .filter(
+          (transaction) =>
+            transaction.type ===
+            "income"
+        )
+        .reduce(
+          (total, transaction) =>
+            total +
+            transaction.amount,
+          0
+        );
+    }, [reportTransactions]);
 
-  const totalExpense = useMemo(() => {
-    return reportTransactions
-      .filter(
-        (transaction) =>
-          transaction.type === "expense"
-      )
-      .reduce(
-        (total, transaction) =>
-          total + transaction.amount,
-        0
-      );
-  }, [reportTransactions]);
+  const totalExpense =
+    useMemo(() => {
+      return reportTransactions
+        .filter(
+          (transaction) =>
+            transaction.type ===
+            "expense"
+        )
+        .reduce(
+          (total, transaction) =>
+            total +
+            transaction.amount,
+          0
+        );
+    }, [reportTransactions]);
 
   const netTotal =
     totalIncome - totalExpense;
@@ -117,11 +147,12 @@ function ReportsPage({
     <section className="reports-page">
       <header className="reports-header">
         <span>REY KASA</span>
+
         <h1>Raporlar</h1>
 
         <p>
-          Gelir ve gider durumunu seçilen
-          döneme göre incele.
+          Gelir ve gider durumunu
+          seçilen döneme göre incele.
         </p>
       </header>
 
@@ -177,32 +208,43 @@ function ReportsPage({
         </div>
 
         <small>
-          {reportTransactions.length} işlem
+          {reportTransactions.length}{" "}
+          işlem
         </small>
       </div>
 
       <div className="report-summary-grid">
         <article className="report-card report-income">
           <div className="report-card-icon">
-            <ArrowUpRight size={21} />
+            <ArrowUpRight
+              size={21}
+            />
           </div>
 
           <span>Toplam Gelir</span>
 
           <strong>
-            ₺{formatMoney(totalIncome)}
+            ₺
+            {formatMoney(
+              totalIncome
+            )}
           </strong>
         </article>
 
         <article className="report-card report-expense">
           <div className="report-card-icon">
-            <ArrowDownRight size={21} />
+            <ArrowDownRight
+              size={21}
+            />
           </div>
 
           <span>Toplam Gider</span>
 
           <strong>
-            ₺{formatMoney(totalExpense)}
+            ₺
+            {formatMoney(
+              totalExpense
+            )}
           </strong>
         </article>
 
@@ -220,7 +262,10 @@ function ReportsPage({
                 : "report-negative"
             }
           >
-            {netTotal >= 0 ? "+" : "-"}₺
+            {netTotal >= 0
+              ? "+"
+              : "-"}
+            ₺
             {formatMoney(
               Math.abs(netTotal)
             )}
@@ -229,13 +274,16 @@ function ReportsPage({
       </div>
 
       <section className="report-transactions">
-        <h2>{periodTitle} Yapılan İşlemler</h2>
+        <h2>
+          {periodTitle} Yapılan
+          İşlemler
+        </h2>
 
         {reportTransactions.length ===
         0 ? (
           <div className="report-empty">
-            Bu dönemde herhangi bir işlem
-            bulunmuyor.
+            Bu dönemde herhangi bir
+            işlem bulunmuyor.
           </div>
         ) : (
           <div className="report-list">
@@ -247,7 +295,9 @@ function ReportsPage({
                 >
                   <div>
                     <strong>
-                      {transaction.description}
+                      {
+                        transaction.description
+                      }
                     </strong>
 
                     <time>
@@ -288,6 +338,10 @@ function ReportsPage({
           </div>
         )}
       </section>
+
+      <DayEndHistory
+        records={dayEnds}
+      />
     </section>
   );
 }
