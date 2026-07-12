@@ -109,8 +109,16 @@ This typically indicates that your device does not have a healthy Internet conne
             width: calc(100% - 24px);
             max-width: 420px;
 
-            margin: 12px auto;
+            margin:
+  calc(
+    12px + env(safe-area-inset-top)
+  )
+  auto
+  12px;
             padding: 10px;
+
+            scroll-margin-top:
+  env(safe-area-inset-top);
 
             border: 1px solid #e5e7eb;
             border-radius: 16px;
