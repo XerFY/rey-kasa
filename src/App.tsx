@@ -439,40 +439,41 @@ function App() {
     }
   }
 
-  async function saveTransaction(
-    amount: number,
-    description: string
-  ): Promise<void> {
-    try {
-      setSaving(true);
-      setSyncError("");
+  function saveTransaction(
+  amount: number,
+  description: string
+): Promise<void> {
+  if (saving) {
+    return Promise.resolve();
+  }
 
-      await createTransaction({
-        type: transactionType,
-        amount,
-        description,
-        createdAt: Date.now(),
-      });
+  setSaving(true);
+  setSyncError("");
 
-      setTransactionModalOpen(
-        false
-      );
-    } catch (error) {
-      console.error(
-        "İşlem kaydetme hatası:",
-        error
-      );
+  // Kayıt cihazda oluştuğu anda pencereyi kapat.
+  setTransactionModalOpen(false);
+
+  void createTransaction({
+    type: transactionType,
+    amount,
+    description,
+    createdAt: Date.now(),
+  })
+    .catch((error) => {
+      console.error("İşlem kaydetme hatası:", error);
 
       setSyncError(
         error instanceof Error
           ? `İşlem kaydedilemedi: ${error.message}`
           : "İşlem kaydedilemedi."
       );
-    } finally {
-      setSaving(false);
-    }
-  }
+    });
 
+  // Firebase sunucu bağlantısını beklemeden yeniden kullanıma aç.
+  setSaving(false);
+
+  return Promise.resolve();
+}
   async function handleCashAdjustment(
     difference: number
   ): Promise<void> {
