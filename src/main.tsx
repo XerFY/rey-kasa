@@ -23,3 +23,41 @@ createRoot(rootElement).render(
 );
 
 registerPWA();
+
+function hideSplashScreen() {
+  const splash =
+    document.getElementById(
+      "app-splash"
+    );
+
+  if (!splash) {
+    return;
+  }
+
+  window.requestAnimationFrame(() => {
+    window.requestAnimationFrame(() => {
+      splash.classList.add(
+        "splash-hidden"
+      );
+
+      window.setTimeout(() => {
+        splash.remove();
+      }, 250);
+    });
+  });
+}
+
+if (
+  document.readyState ===
+  "complete"
+) {
+  hideSplashScreen();
+} else {
+  window.addEventListener(
+    "load",
+    hideSplashScreen,
+    {
+      once: true,
+    }
+  );
+}

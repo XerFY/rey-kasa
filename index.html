@@ -15,7 +15,7 @@
 
     <meta
       name="color-scheme"
-      content="light dark"
+      content="light"
     />
 
     <meta
@@ -50,13 +50,223 @@
     />
 
     <title>REY KASA</title>
+
+    <style>
+      html,
+      body {
+        margin: 0;
+        min-width: 320px;
+        min-height: 100%;
+        background: #eef2f6;
+      }
+
+      #app-splash {
+        position: fixed;
+        inset: 0;
+        z-index: 99999;
+
+        padding:
+          env(safe-area-inset-top)
+          env(safe-area-inset-right)
+          env(safe-area-inset-bottom)
+          env(safe-area-inset-left);
+
+        background:
+          radial-gradient(
+            circle at center,
+            rgba(199, 154, 43, 0.12),
+            transparent 42%
+          ),
+          #eef2f6;
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        opacity: 1;
+
+        transition:
+          opacity 0.22s ease,
+          visibility 0.22s ease;
+      }
+
+      #app-splash.splash-hidden {
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+      }
+
+      .splash-content {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+
+        transform: translateY(-12px);
+      }
+
+      .splash-logo {
+        width: 82px;
+        height: 82px;
+
+        border: 1px solid
+          rgba(199, 154, 43, 0.32);
+
+        border-radius: 27px;
+
+        background: #ffffff;
+        color: #c79a2b;
+
+        display: grid;
+        place-items: center;
+
+        box-shadow:
+          0 18px 45px
+          rgba(15, 23, 42, 0.1);
+
+        font-family:
+          Georgia,
+          "Times New Roman",
+          serif;
+
+        font-size: 42px;
+        font-weight: 800;
+
+        animation:
+          splash-logo-in
+          0.32s ease-out;
+      }
+
+      .splash-title {
+        margin-top: 18px;
+
+        color: #1e293b;
+
+        font-family:
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+
+        font-size: 25px;
+        font-weight: 850;
+        letter-spacing: 1.3px;
+      }
+
+      .splash-subtitle {
+        margin-top: 5px;
+
+        color: #64748b;
+
+        font-family:
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+
+        font-size: 12px;
+        font-weight: 650;
+      }
+
+      .splash-loader {
+        width: 42px;
+        height: 3px;
+
+        margin-top: 24px;
+
+        overflow: hidden;
+
+        border-radius: 999px;
+
+        background:
+          rgba(199, 154, 43, 0.18);
+      }
+
+      .splash-loader::after {
+        content: "";
+
+        display: block;
+
+        width: 55%;
+        height: 100%;
+
+        border-radius: inherit;
+
+        background: #c79a2b;
+
+        animation:
+          splash-loading
+          0.8s ease-in-out infinite;
+      }
+
+      @keyframes splash-logo-in {
+        from {
+          opacity: 0;
+          transform:
+            scale(0.82)
+            translateY(8px);
+        }
+
+        to {
+          opacity: 1;
+          transform:
+            scale(1)
+            translateY(0);
+        }
+      }
+
+      @keyframes splash-loading {
+        from {
+          transform:
+            translateX(-110%);
+        }
+
+        to {
+          transform:
+            translateX(190%);
+        }
+      }
+
+      @media (
+        prefers-reduced-motion:
+        reduce
+      ) {
+        #app-splash,
+        .splash-logo,
+        .splash-loader::after {
+          animation: none;
+          transition: none;
+        }
+      }
+    </style>
   </head>
 
   <body>
+    <div
+      id="app-splash"
+      aria-label="REY KASA yükleniyor"
+    >
+      <div class="splash-content">
+        <div class="splash-logo">
+          ◈
+        </div>
+
+        <div class="splash-title">
+          REY KASA
+        </div>
+
+        <div class="splash-subtitle">
+          Kasa Yönetim Sistemi
+        </div>
+
+        <div class="splash-loader"></div>
+      </div>
+    </div>
+
     <div id="root"></div>
 
     <noscript>
-      REY KASA için JavaScript etkin olmalıdır.
+      REY KASA için JavaScript
+      etkin olmalıdır.
     </noscript>
 
     <script
