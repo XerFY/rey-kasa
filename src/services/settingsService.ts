@@ -9,8 +9,11 @@ import { db } from "../firebase";
 
 import {
   defaultAppSettings,
+  defaultPrinterSettings,
   type AppSettings,
+  type PrinterSettings,
   type QuickDescription,
+  type ThemeMode,
 } from "../types/AppSettings";
 
 const settingsDocument = doc(
@@ -42,6 +45,177 @@ function isQuickDescription(
   );
 }
 
+function isThemeMode(
+  value: unknown
+): value is ThemeMode {
+  return (
+    value === "light" ||
+    value === "dark" ||
+    value === "system"
+  );
+}
+
+function readString(
+  value: unknown,
+  fallback: string
+): string {
+  return typeof value === "string"
+    ? value
+    : fallback;
+}
+
+function readBoolean(
+  value: unknown,
+  fallback: boolean
+): boolean {
+  return typeof value === "boolean"
+    ? value
+    : fallback;
+}
+
+function readNumber(
+  value: unknown,
+  fallback: number
+): number {
+  return (
+    typeof value === "number" &&
+    Number.isFinite(value)
+  )
+    ? value
+    : fallback;
+}
+
+function readPrinterSettings(
+  value: unknown
+): PrinterSettings {
+  if (
+    typeof value !== "object" ||
+    value === null
+  ) {
+    return defaultPrinterSettings;
+  }
+
+  const printer = value as Record<
+    string,
+    unknown
+  >;
+
+  const rawPort = readNumber(
+    printer.port,
+    defaultPrinterSettings.port
+  );
+
+  const rawCharactersPerLine = readNumber(
+    printer.charactersPerLine,
+    defaultPrinterSettings.charactersPerLine
+  );
+
+  return {
+    enabled: readBoolean(
+      printer.enabled,
+      defaultPrinterSettings.enabled
+    ),
+
+    ipAddress: readString(
+      printer.ipAddress,
+      defaultPrinterSettings.ipAddress
+    ),
+
+    port:
+      rawPort >= 1 &&
+      rawPort <= 65535
+        ? Math.trunc(rawPort)
+        : defaultPrinterSettings.port,
+
+    autoPrintDayEnd: readBoolean(
+      printer.autoPrintDayEnd,
+      defaultPrinterSettings.autoPrintDayEnd
+    ),
+
+    charactersPerLine:
+      rawCharactersPerLine >= 32 &&
+      rawCharactersPerLine <= 64
+        ? Math.trunc(
+            rawCharactersPerLine
+          )
+        : defaultPrinterSettings.charactersPerLine,
+  };
+}
+
+function normalizeSettings(
+  data: Record<string, unknown>
+): AppSettings {
+  const rawDescriptions =
+    data.quickDescriptions;
+
+  const quickDescriptions =
+    Array.isArray(rawDescriptions)
+      ? rawDescriptions.filter(
+          isQuickDescription
+        )
+      : [];
+
+  const openingBalance = readNumber(
+    data.openingBalance,
+    defaultAppSettings.openingBalance
+  );
+
+  const largeTransactionThreshold =
+    readNumber(
+      data.largeTransactionThreshold,
+      defaultAppSettings.largeTransactionThreshold
+    );
+
+  return {
+    quickDescriptions,
+    openingBalance,
+
+    businessName: readString(
+      data.businessName,
+      defaultAppSettings.businessName
+    ),
+
+    businessPhone: readString(
+      data.businessPhone,
+      defaultAppSettings.businessPhone
+    ),
+
+    receiptFooter: readString(
+      data.receiptFooter,
+      defaultAppSettings.receiptFooter
+    ),
+
+    theme: isThemeMode(data.theme)
+      ? data.theme
+      : defaultAppSettings.theme,
+
+    dayEndReminderEnabled: readBoolean(
+      data.dayEndReminderEnabled,
+      defaultAppSettings.dayEndReminderEnabled
+    ),
+
+    dayEndReminderTime: readString(
+      data.dayEndReminderTime,
+      defaultAppSettings.dayEndReminderTime
+    ),
+
+    largeTransactionWarningEnabled:
+      readBoolean(
+        data.largeTransactionWarningEnabled,
+        defaultAppSettings.largeTransactionWarningEnabled
+      ),
+
+    largeTransactionThreshold:
+      largeTransactionThreshold >= 0
+        ? largeTransactionThreshold
+        : defaultAppSettings.largeTransactionThreshold,
+
+    printer: readPrinterSettings(
+      data.printer
+    ),
+  };
+}
+
 export function listenSettings(
   onData: (
     settings: AppSettings
@@ -52,41 +226,15 @@ export function listenSettings(
     settingsDocument,
     (snapshot) => {
       if (!snapshot.exists()) {
-        onData(
-          defaultAppSettings
-        );
-
+        onData(defaultAppSettings);
         return;
       }
 
-      const data =
-        snapshot.data();
-
-      const rawDescriptions =
-        data.quickDescriptions;
-
-      const quickDescriptions =
-        Array.isArray(
-          rawDescriptions
+      onData(
+        normalizeSettings(
+          snapshot.data()
         )
-          ? rawDescriptions.filter(
-              isQuickDescription
-            )
-          : [];
-
-      const openingBalance =
-        typeof data.openingBalance ===
-          "number" &&
-        Number.isFinite(
-          data.openingBalance
-        )
-          ? data.openingBalance
-          : 0;
-
-      onData({
-        quickDescriptions,
-        openingBalance,
-      });
+      );
     },
     onError
   );
@@ -100,8 +248,7 @@ export async function saveQuickDescriptions(
       .map((description) => ({
         id: description.id,
         type: description.type,
-        label:
-          description.label.trim(),
+        label: description.label.trim(),
       }))
       .filter(
         (description) =>
@@ -138,6 +285,101 @@ export async function saveOpeningBalance(
     settingsDocument,
     {
       openingBalance,
+    },
+    {
+      merge: true,
+    }
+  );
+}
+
+export async function saveGeneralSettings(
+  settings: Pick<
+    AppSettings,
+    | "businessName"
+    | "businessPhone"
+    | "receiptFooter"
+    | "theme"
+    | "dayEndReminderEnabled"
+    | "dayEndReminderTime"
+    | "largeTransactionWarningEnabled"
+    | "largeTransactionThreshold"
+    | "printer"
+  >
+): Promise<void> {
+  const businessName =
+    settings.businessName.trim() ||
+    defaultAppSettings.businessName;
+
+  const businessPhone =
+    settings.businessPhone.trim();
+
+  const receiptFooter =
+    settings.receiptFooter.trim();
+
+  const largeTransactionThreshold =
+    Number.isFinite(
+      settings.largeTransactionThreshold
+    ) &&
+    settings.largeTransactionThreshold >= 0
+      ? settings.largeTransactionThreshold
+      : defaultAppSettings.largeTransactionThreshold;
+
+  const printerPort =
+    Number.isFinite(
+      settings.printer.port
+    ) &&
+    settings.printer.port >= 1 &&
+    settings.printer.port <= 65535
+      ? Math.trunc(
+          settings.printer.port
+        )
+      : defaultPrinterSettings.port;
+
+  const charactersPerLine =
+    Number.isFinite(
+      settings.printer.charactersPerLine
+    ) &&
+    settings.printer.charactersPerLine >= 32 &&
+    settings.printer.charactersPerLine <= 64
+      ? Math.trunc(
+          settings.printer.charactersPerLine
+        )
+      : defaultPrinterSettings.charactersPerLine;
+
+  await setDoc(
+    settingsDocument,
+    {
+      businessName,
+      businessPhone,
+      receiptFooter,
+
+      theme: settings.theme,
+
+      dayEndReminderEnabled:
+        settings.dayEndReminderEnabled,
+
+      dayEndReminderTime:
+        settings.dayEndReminderTime,
+
+      largeTransactionWarningEnabled:
+        settings.largeTransactionWarningEnabled,
+
+      largeTransactionThreshold,
+
+      printer: {
+        enabled:
+          settings.printer.enabled,
+
+        ipAddress:
+          settings.printer.ipAddress.trim(),
+
+        port: printerPort,
+
+        autoPrintDayEnd:
+          settings.printer.autoPrintDayEnd,
+
+        charactersPerLine,
+      },
     },
     {
       merge: true,

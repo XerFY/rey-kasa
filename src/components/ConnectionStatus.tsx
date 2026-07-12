@@ -1,15 +1,34 @@
-import { useEffect, useState } from "react";
-import { Cloud, CloudOff, LoaderCircle } from "lucide-react";
+import {
+  Cloud,
+  CloudOff,
+  LoaderCircle,
+  RefreshCw,
+} from "lucide-react";
+
+import {
+  useEffect,
+  useState,
+} from "react";
 
 import "../styles/ConnectionStatus.css";
 
 type Props = {
   loading: boolean;
   syncError: string;
+  hasPendingWrites?: boolean;
 };
 
-function ConnectionStatus({ loading, syncError }: Props) {
-  const [isOnline, setIsOnline] = useState(() => navigator.onLine);
+function ConnectionStatus({
+  loading,
+  syncError,
+  hasPendingWrites = false,
+}: Props) {
+  const [
+    isOnline,
+    setIsOnline,
+  ] = useState(
+    () => navigator.onLine
+  );
 
   useEffect(() => {
     function handleOnline() {
@@ -20,12 +39,26 @@ function ConnectionStatus({ loading, syncError }: Props) {
       setIsOnline(false);
     }
 
-    window.addEventListener("online", handleOnline);
-    window.addEventListener("offline", handleOffline);
+    window.addEventListener(
+      "online",
+      handleOnline
+    );
+
+    window.addEventListener(
+      "offline",
+      handleOffline
+    );
 
     return () => {
-      window.removeEventListener("online", handleOnline);
-      window.removeEventListener("offline", handleOffline);
+      window.removeEventListener(
+        "online",
+        handleOnline
+      );
+
+      window.removeEventListener(
+        "offline",
+        handleOffline
+      );
     };
   }, []);
 
@@ -33,7 +66,11 @@ function ConnectionStatus({ loading, syncError }: Props) {
     return (
       <div className="connection-status connection-offline">
         <CloudOff size={15} />
-        <span>İnternet yok — işlemler cihazda saklanıyor</span>
+
+        <span>
+          İnternet yok — işlemler
+          cihazda saklanıyor
+        </span>
       </div>
     );
   }
@@ -47,11 +84,29 @@ function ConnectionStatus({ loading, syncError }: Props) {
     );
   }
 
-  if (loading) {
+  if (
+    loading ||
+    hasPendingWrites
+  ) {
     return (
       <div className="connection-status connection-loading">
-        <LoaderCircle className="connection-spinner" size={15} />
-        <span>Buluta bağlanıyor...</span>
+        {loading ? (
+          <LoaderCircle
+            className="connection-spinner"
+            size={15}
+          />
+        ) : (
+          <RefreshCw
+            className="connection-spinner"
+            size={15}
+          />
+        )}
+
+        <span>
+          {loading
+            ? "Buluta bağlanıyor..."
+            : "Değişiklikler gönderiliyor..."}
+        </span>
       </div>
     );
   }

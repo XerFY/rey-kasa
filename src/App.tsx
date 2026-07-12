@@ -12,8 +12,14 @@ import BottomNavigation, {
 } from "./components/BottomNavigation";
 import CashAdjustmentModal from "./components/CashAdjustmentModal";
 import DayEndModal from "./components/DayEndModal";
+import DayEndReminderBanner from "./components/DayEndReminderBanner";
 import DeleteTransactionModal from "./components/DeleteTransactionModal";
 import EditTransactionModal from "./components/EditTransactionModal";
+import LargeTransactionModal from "./components/LargeTransactionModal";
+import UndoDeleteToast from "./components/UndoDeleteToast";
+
+import { useAppTheme } from "./hooks/useAppTheme";
+import { useDayEndReminder } from "./hooks/useDayEndReminder";
 
 import HomePage from "./pages/HomePage";
 import ReportsPage from "./pages/ReportsPage";
@@ -23,10 +29,16 @@ import TransactionsPage from "./pages/TransactionsPage";
 import {
   listenDayEnds,
   saveDayEnd,
+  updateClosedDayAfterChange,
 } from "./services/dayEndService";
 
 import {
+  queueDayEndPrint,
+} from "./services/printerQueueService";
+
+import {
   listenSettings,
+  saveGeneralSettings,
   saveOpeningBalance,
   saveQuickDescriptions,
 } from "./services/settingsService";
@@ -36,22 +48,40 @@ import {
   createTransaction,
   deleteTransaction,
   listenTransactions,
+  restoreTransaction,
   updateTransaction,
 } from "./services/transactionService";
 
-import type { QuickDescription } from "./types/AppSettings";
+import {
+  defaultAppSettings,
+  type AppSettings,
+  type QuickDescription,
+} from "./types/AppSettings";
+
 import type { DayEndRecord } from "./types/DayEndRecord";
 import type { Transaction } from "./types/Transaction";
+
+import {
+  createDateKey,
+  findClosedDay,
+} from "./utils/dateUtils";
 
 type TransactionType =
   | "income"
   | "expense";
 
+type PendingTransaction = {
+  type: TransactionType;
+  amount: number;
+  description: string;
+};
+
 function isSameDay(
   timestamp: number,
   targetDate: Date
 ): boolean {
-  const date = new Date(timestamp);
+  const date =
+    new Date(timestamp);
 
   return (
     date.getDate() ===
@@ -63,33 +93,28 @@ function isSameDay(
   );
 }
 
-function createDateKey(
-  date: Date
-): string {
-  const year = date.getFullYear();
-
-  const month = String(
-    date.getMonth() + 1
-  ).padStart(2, "0");
-
-  const day = String(
-    date.getDate()
-  ).padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
-}
-
 function App() {
   const [
     transactions,
     setTransactions,
   ] = useState<Transaction[]>([]);
 
-  const [dayEnds, setDayEnds] =
-    useState<DayEndRecord[]>([]);
+  const [
+    dayEnds,
+    setDayEnds,
+  ] = useState<DayEndRecord[]>([]);
 
-  const [activePage, setActivePage] =
-    useState<AppPage>("home");
+  const [
+    settings,
+    setSettings,
+  ] = useState<AppSettings>(
+    defaultAppSettings
+  );
+
+  const [
+    activePage,
+    setActivePage,
+  ] = useState<AppPage>("home");
 
   const [
     transactionModalOpen,
@@ -126,6 +151,20 @@ function App() {
   );
 
   const [
+    deletedTransaction,
+    setDeletedTransaction,
+  ] = useState<Transaction | null>(
+    null
+  );
+
+  const [
+    pendingLargeTransaction,
+    setPendingLargeTransaction,
+  ] = useState<PendingTransaction | null>(
+    null
+  );
+
+  const [
     transactionType,
     setTransactionType,
   ] = useState<TransactionType>(
@@ -133,28 +172,24 @@ function App() {
   );
 
   const [
-    quickDescriptions,
-    setQuickDescriptions,
-  ] = useState<
-    QuickDescription[]
-  >([]);
+    loading,
+    setLoading,
+  ] = useState(true);
 
   const [
-    openingBalance,
-    setOpeningBalance,
-  ] = useState(0);
+    saving,
+    setSaving,
+  ] = useState(false);
 
-  const [loading, setLoading] =
-    useState(true);
+  const [
+    editing,
+    setEditing,
+  ] = useState(false);
 
-  const [saving, setSaving] =
-    useState(false);
-
-  const [editing, setEditing] =
-    useState(false);
-
-  const [deleting, setDeleting] =
-    useState(false);
+  const [
+    deleting,
+    setDeleting,
+  ] = useState(false);
 
   const [
     settingsLoading,
@@ -172,9 +207,25 @@ function App() {
   ] = useState(false);
 
   const [
+    hasPendingWrites,
+    setHasPendingWrites,
+  ] = useState(false);
+
+  const [
     syncError,
     setSyncError,
   ] = useState("");
+
+  useAppTheme(settings.theme);
+
+  const {
+    showReminder,
+    dismissReminder,
+  } = useDayEndReminder(
+    settings,
+    transactions,
+    dayEnds
+  );
 
   useEffect(() => {
     let unsubscribe:
@@ -183,10 +234,9 @@ function App() {
 
     let mounted = true;
 
-    async function startFirebase() {
+    async function start() {
       try {
         setLoading(true);
-        setSyncError("");
 
         await connectFirebase();
 
@@ -195,12 +245,17 @@ function App() {
         unsubscribe =
           listenTransactions(
             (
-              firebaseTransactions
+              records,
+              pendingWrites
             ) => {
               if (!mounted) return;
 
               setTransactions(
-                firebaseTransactions
+                records
+              );
+
+              setHasPendingWrites(
+                pendingWrites
               );
 
               setLoading(false);
@@ -208,11 +263,6 @@ function App() {
             },
             (error) => {
               if (!mounted) return;
-
-              console.error(
-                "Firestore dinleme hatası:",
-                error
-              );
 
               setLoading(false);
 
@@ -224,22 +274,17 @@ function App() {
       } catch (error) {
         if (!mounted) return;
 
-        console.error(
-          "Firebase başlatma hatası:",
-          error
-        );
-
         setLoading(false);
 
         setSyncError(
           error instanceof Error
-            ? `Firebase hatası: ${error.message}`
+            ? error.message
             : "Firebase bağlantısı kurulamadı."
         );
       }
     }
 
-    void startFirebase();
+    void start();
 
     return () => {
       mounted = false;
@@ -254,62 +299,51 @@ function App() {
 
     let mounted = true;
 
-    async function startSettings() {
+    async function start() {
       try {
-        setSettingsLoading(true);
-
         await connectFirebase();
 
         if (!mounted) return;
 
-        unsubscribe = listenSettings(
-          (settings) => {
-            if (!mounted) return;
+        unsubscribe =
+          listenSettings(
+            (newSettings) => {
+              if (!mounted) return;
 
-            setQuickDescriptions(
-              settings.quickDescriptions
-            );
+              setSettings(
+                newSettings
+              );
 
-            setOpeningBalance(
-              settings.openingBalance
-            );
+              setSettingsLoading(
+                false
+              );
+            },
+            (error) => {
+              if (!mounted) return;
 
-            setSettingsLoading(false);
-          },
-          (error) => {
-            if (!mounted) return;
+              setSettingsLoading(
+                false
+              );
 
-            console.error(
-              "Ayarları okuma hatası:",
-              error
-            );
-
-            setSettingsLoading(false);
-
-            setSyncError(
-              `Ayarlar yüklenemedi: ${error.message}`
-            );
-          }
-        );
+              setSyncError(
+                `Ayarlar yüklenemedi: ${error.message}`
+              );
+            }
+          );
       } catch (error) {
         if (!mounted) return;
-
-        console.error(
-          "Ayar bağlantı hatası:",
-          error
-        );
 
         setSettingsLoading(false);
 
         setSyncError(
           error instanceof Error
-            ? `Ayarlar yüklenemedi: ${error.message}`
+            ? error.message
             : "Ayarlar yüklenemedi."
         );
       }
     }
 
-    void startSettings();
+    void start();
 
     return () => {
       mounted = false;
@@ -324,40 +358,33 @@ function App() {
 
     let mounted = true;
 
-    async function startDayEnds() {
+    async function start() {
       try {
         await connectFirebase();
 
         if (!mounted) return;
 
-        unsubscribe = listenDayEnds(
-          (records) => {
-            if (!mounted) return;
+        unsubscribe =
+          listenDayEnds(
+            (records) => {
+              if (!mounted) return;
 
-            setDayEnds(records);
-          },
-          (error) => {
-            if (!mounted) return;
+              setDayEnds(records);
+            },
+            (error) => {
+              if (!mounted) return;
 
-            console.error(
-              "Gün sonu arşiv hatası:",
-              error
-            );
-
-            setSyncError(
-              `Gün sonları yüklenemedi: ${error.message}`
-            );
-          }
-        );
+              setSyncError(
+                `Gün sonları yüklenemedi: ${error.message}`
+              );
+            }
+          );
       } catch (error) {
-        console.error(
-          "Gün sonu bağlantı hatası:",
-          error
-        );
+        console.error(error);
       }
     }
 
-    void startDayEnds();
+    void start();
 
     return () => {
       mounted = false;
@@ -365,29 +392,31 @@ function App() {
     };
   }, []);
 
-  const balance = useMemo(() => {
-    return transactions.reduce(
-      (
-        total,
-        transaction
-      ) => {
-        return transaction.type ===
-          "income"
-          ? total +
-              transaction.amount
-          : total -
-              transaction.amount;
-      },
-      openingBalance
-    );
-  }, [
-    transactions,
-    openingBalance,
-  ]);
+  const balance =
+    useMemo(() => {
+      return transactions.reduce(
+        (
+          total,
+          transaction
+        ) => {
+          return transaction.type ===
+            "income"
+            ? total +
+                transaction.amount
+            : total -
+                transaction.amount;
+        },
+        settings.openingBalance
+      );
+    }, [
+      transactions,
+      settings.openingBalance,
+    ]);
 
   const todayTransactions =
     useMemo(() => {
-      const today = new Date();
+      const today =
+        new Date();
 
       return transactions.filter(
         (transaction) =>
@@ -399,7 +428,9 @@ function App() {
     }, [transactions]);
 
   const todayDateKey =
-    createDateKey(new Date());
+    createDateKey(
+      new Date()
+    );
 
   const todayAlreadyArchived =
     dayEnds.some(
@@ -431,37 +462,20 @@ function App() {
     setSyncError("");
   }
 
-  function closeTransactionModal() {
-    if (!saving) {
-      setTransactionModalOpen(
-        false
-      );
-    }
-  }
+  function persistTransaction(
+    transaction: PendingTransaction
+  ) {
+    setSaving(true);
+    setSyncError("");
 
-  function saveTransaction(
-  amount: number,
-  description: string
-): Promise<void> {
-  if (saving) {
-    return Promise.resolve();
-  }
+    setTransactionModalOpen(
+      false
+    );
 
-  setSaving(true);
-  setSyncError("");
-
-  // Kayıt cihazda oluştuğu anda pencereyi kapat.
-  setTransactionModalOpen(false);
-
-  void createTransaction({
-    type: transactionType,
-    amount,
-    description,
-    createdAt: Date.now(),
-  })
-    .catch((error) => {
-      console.error("İşlem kaydetme hatası:", error);
-
+    void createTransaction({
+      ...transaction,
+      createdAt: Date.now(),
+    }).catch((error) => {
       setSyncError(
         error instanceof Error
           ? `İşlem kaydedilemedi: ${error.message}`
@@ -469,65 +483,106 @@ function App() {
       );
     });
 
-  // Firebase sunucu bağlantısını beklemeden yeniden kullanıma aç.
-  setSaving(false);
+    setSaving(false);
+  }
 
-  return Promise.resolve();
-}
-  async function handleCashAdjustment(
-    difference: number
+  function saveTransaction(
+    amount: number,
+    description: string
   ): Promise<void> {
-    if (
-      !Number.isFinite(
-        difference
-      ) ||
-      Math.abs(difference) <
-        0.005
-    ) {
+    if (saving) {
+      return Promise.resolve();
+    }
+
+    const pending: PendingTransaction = {
+      type: transactionType,
+      amount,
+      description,
+    };
+
+    const requiresWarning =
+      settings.largeTransactionWarningEnabled &&
+      settings.largeTransactionThreshold > 0 &&
+      amount >=
+        settings.largeTransactionThreshold;
+
+    if (requiresWarning) {
+      setTransactionModalOpen(false);
+
+      setPendingLargeTransaction(
+        pending
+      );
+
+      return Promise.resolve();
+    }
+
+    persistTransaction(
+      pending
+    );
+
+    return Promise.resolve();
+  }
+
+  function confirmLargeTransaction() {
+    if (!pendingLargeTransaction) {
       return;
     }
 
-    try {
-      setSaving(true);
-      setSyncError("");
+    persistTransaction(
+      pendingLargeTransaction
+    );
 
-      await createTransaction({
-        type:
-          difference > 0
-            ? "income"
-            : "expense",
+    setPendingLargeTransaction(
+      null
+    );
+  }
 
-        amount:
-          Math.abs(difference),
-
-        description:
-          "Kasa Düzeltmesi",
-
-        createdAt: Date.now(),
-      });
-
-      setAdjustmentModalOpen(
-        false
-      );
-    } catch (error) {
-      console.error(
-        "Kasa düzeltme hatası:",
-        error
-      );
-
-      setSyncError(
-        error instanceof Error
-          ? `Kasa düzeltilemedi: ${error.message}`
-          : "Kasa düzeltilemedi."
-      );
-    } finally {
-      setSaving(false);
+  function handleCashAdjustment(
+    difference: number
+  ): Promise<void> {
+    if (
+      !Number.isFinite(difference) ||
+      Math.abs(difference) < 0.005
+    ) {
+      return Promise.resolve();
     }
+
+    setAdjustmentModalOpen(false);
+
+    persistTransaction({
+      type:
+        difference > 0
+          ? "income"
+          : "expense",
+
+      amount:
+        Math.abs(difference),
+
+      description:
+        "Kasa Düzeltmesi",
+    });
+
+    return Promise.resolve();
   }
 
   function openEditModal(
     transaction: Transaction
   ) {
+    const closedDay =
+      findClosedDay(
+        transaction,
+        dayEnds
+      );
+
+    if (closedDay) {
+      const confirmed =
+        window.confirm(
+          "Bu işlem kapatılmış bir güne ait. Düzenleme yapılırsa eski gün sonu raporu otomatik güncellenecek. Devam edilsin mi?"
+        );
+
+      if (!confirmed) return;
+    }
+
     setSelectedTransaction(
       transaction
     );
@@ -536,59 +591,83 @@ function App() {
     setSyncError("");
   }
 
-  function closeEditModal() {
-    if (editing) return;
-
-    setEditModalOpen(false);
-
-    setSelectedTransaction(
-      null
-    );
-  }
-
-  async function saveEditedTransaction(
+  function saveEditedTransaction(
     id: string,
     type: TransactionType,
     amount: number,
     description: string
   ): Promise<void> {
-    try {
-      setEditing(true);
-      setSyncError("");
+    const before =
+      selectedTransaction;
 
-      await updateTransaction(
-        id,
-        {
-          type,
-          amount,
-          description,
-        }
-      );
+    if (!before) {
+      return Promise.resolve();
+    }
 
-      setEditModalOpen(false);
+    const after: Transaction = {
+      ...before,
+      type,
+      amount,
+      description,
+    };
 
-      setSelectedTransaction(
-        null
-      );
-    } catch (error) {
-      console.error(
-        "İşlem düzenleme hatası:",
-        error
-      );
+    setEditing(true);
+    setEditModalOpen(false);
+    setSelectedTransaction(null);
 
+    void updateTransaction(
+      id,
+      {
+        type,
+        amount,
+        description,
+      },
+      before
+    ).catch((error) => {
       setSyncError(
         error instanceof Error
           ? `İşlem düzenlenemedi: ${error.message}`
           : "İşlem düzenlenemedi."
       );
-    } finally {
-      setEditing(false);
+    });
+
+    const closedDay =
+      findClosedDay(
+        before,
+        dayEnds
+      );
+
+    if (closedDay) {
+      void updateClosedDayAfterChange(
+        closedDay,
+        before,
+        after
+      );
     }
+
+    setEditing(false);
+
+    return Promise.resolve();
   }
 
   function requestDeleteTransaction(
     transaction: Transaction
   ) {
+    const closedDay =
+      findClosedDay(
+        transaction,
+        dayEnds
+      );
+
+    if (closedDay) {
+      const confirmed =
+        window.confirm(
+          "Bu işlem kapatılmış bir güne ait. Silinirse eski gün sonu raporu otomatik güncellenecek. Devam edilsin mi?"
+        );
+
+      if (!confirmed) return;
+    }
+
     setDeleteCandidate(
       transaction
     );
@@ -596,124 +675,198 @@ function App() {
     setSyncError("");
   }
 
-  function closeDeleteModal() {
-    if (!deleting) {
-      setDeleteCandidate(null);
-    }
-  }
-
-  async function confirmDeleteTransaction():
+  function confirmDeleteTransaction():
     Promise<void> {
     if (
       !deleteCandidate ||
       deleting
     ) {
-      return;
+      return Promise.resolve();
     }
 
-    try {
-      setDeleting(true);
-      setSyncError("");
+    const transaction =
+      deleteCandidate;
 
-      await deleteTransaction(
-        deleteCandidate.id
+    const closedDay =
+      findClosedDay(
+        transaction,
+        dayEnds
       );
 
-      setDeleteCandidate(null);
-    } catch (error) {
-      console.error(
-        "İşlem silme hatası:",
-        error
-      );
+    setDeleting(true);
+    setDeleteCandidate(null);
+
+    setDeletedTransaction(
+      transaction
+    );
+
+    void deleteTransaction(
+      transaction.id,
+      transaction
+    ).catch((error) => {
+      setDeletedTransaction(null);
 
       setSyncError(
         error instanceof Error
           ? `İşlem silinemedi: ${error.message}`
           : "İşlem silinemedi."
       );
-    } finally {
-      setDeleting(false);
+    });
+
+    if (closedDay) {
+      void updateClosedDayAfterChange(
+        closedDay,
+        transaction,
+        null
+      );
     }
+
+    setDeleting(false);
+
+    return Promise.resolve();
   }
 
-  async function handleSaveQuickDescriptions(
+  function handleUndoDelete(
+    transaction: Transaction
+  ): Promise<void> {
+    const closedDay =
+      dayEnds.find(
+        (record) =>
+          record.dateKey ===
+          createDateKey(
+            new Date(
+              transaction.createdAt
+            )
+          )
+      );
+
+    void restoreTransaction(
+      transaction
+    ).catch((error) => {
+      setSyncError(
+        error instanceof Error
+          ? `İşlem geri getirilemedi: ${error.message}`
+          : "İşlem geri getirilemedi."
+      );
+    });
+
+    if (closedDay) {
+      void updateClosedDayAfterChange(
+        closedDay,
+        null,
+        transaction
+      );
+    }
+
+    setDeletedTransaction(null);
+
+    return Promise.resolve();
+  }
+
+  function handleSaveQuickDescriptions(
     descriptions:
       QuickDescription[]
   ): Promise<void> {
-    try {
-      setSettingsSaving(true);
-      setSyncError("");
+    setSettingsSaving(true);
 
-      await saveQuickDescriptions(
-        descriptions
-      );
-    } catch (error) {
-      console.error(
-        "Hazır açıklama kaydetme hatası:",
-        error
-      );
-
+    void saveQuickDescriptions(
+      descriptions
+    ).catch((error) => {
       setSyncError(
         error instanceof Error
-          ? `Ayar kaydedilemedi: ${error.message}`
+          ? error.message
           : "Ayar kaydedilemedi."
       );
-    } finally {
-      setSettingsSaving(false);
-    }
+    });
+
+    setSettingsSaving(false);
+
+    return Promise.resolve();
   }
 
-  async function handleSaveOpeningBalance(
+  function handleSaveOpeningBalance(
     amount: number
   ): Promise<void> {
-    try {
-      setSettingsSaving(true);
-      setSyncError("");
+    setSettingsSaving(true);
 
-      await saveOpeningBalance(
-        amount
-      );
-    } catch (error) {
-      console.error(
-        "Başlangıç kasası kaydetme hatası:",
-        error
-      );
-
+    void saveOpeningBalance(
+      amount
+    ).catch((error) => {
       setSyncError(
         error instanceof Error
-          ? `Başlangıç kasası kaydedilemedi: ${error.message}`
+          ? error.message
           : "Başlangıç kasası kaydedilemedi."
       );
-    } finally {
-      setSettingsSaving(false);
-    }
+    });
+
+    setSettingsSaving(false);
+
+    return Promise.resolve();
   }
 
-  async function handleArchiveDayEnd():
-    Promise<void> {
-    try {
-      setArchivingDayEnd(true);
-      setSyncError("");
+  function handleSaveGeneralSettings(
+    newSettings: AppSettings
+  ): Promise<void> {
+    setSettingsSaving(true);
 
-      await saveDayEnd({
-        transactions:
-          todayTransactions,
-        balance,
-      });
-    } catch (error) {
-      console.error(
-        "Gün sonu kaydetme hatası:",
-        error
-      );
+    setSettings(
+      newSettings
+    );
 
+    void saveGeneralSettings(
+      newSettings
+    ).catch((error) => {
       setSyncError(
         error instanceof Error
-          ? `Gün sonu kaydedilemedi: ${error.message}`
+          ? error.message
+          : "Ayarlar kaydedilemedi."
+      );
+    });
+
+    setSettingsSaving(false);
+
+    return Promise.resolve();
+  }
+
+  function handleArchiveDayEnd():
+    Promise<void> {
+    setArchivingDayEnd(true);
+
+    void saveDayEnd({
+      transactions:
+        todayTransactions,
+
+      balance,
+    }).catch((error) => {
+      setSyncError(
+        error instanceof Error
+          ? error.message
           : "Gün sonu kaydedilemedi."
       );
-    } finally {
-      setArchivingDayEnd(false);
+    });
+
+    if (
+      settings.printer.enabled &&
+      settings.printer
+        .autoPrintDayEnd
+    ) {
+      void queueDayEndPrint({
+        transactions:
+          todayTransactions,
+
+        balance,
+      }).catch((error) => {
+        console.error(
+          "Yazdırma kuyruğu hatası:",
+          error
+        );
+      });
     }
+
+    setArchivingDayEnd(false);
+    dismissReminder();
+
+    return Promise.resolve();
   }
 
   function renderPage() {
@@ -723,6 +876,9 @@ function App() {
           transactions={
             transactions
           }
+          todayTransactions={
+            todayTransactions
+          }
           loading={loading}
           saving={
             saving ||
@@ -730,6 +886,9 @@ function App() {
             deleting
           }
           syncError={syncError}
+          hasPendingWrites={
+            hasPendingWrites
+          }
           balance={balance}
           todayTransactionCount={
             todayTransactions.length
@@ -805,12 +964,7 @@ function App() {
 
     return (
       <SettingsPage
-        quickDescriptions={
-          quickDescriptions
-        }
-        openingBalance={
-          openingBalance
-        }
+        settings={settings}
         loading={
           settingsLoading
         }
@@ -822,6 +976,9 @@ function App() {
         }
         onSaveOpeningBalance={
           handleSaveOpeningBalance
+        }
+        onSaveGeneralSettings={
+          handleSaveGeneralSettings
         }
       />
     );
@@ -844,10 +1001,12 @@ function App() {
         }
         type={transactionType}
         quickDescriptions={
-          quickDescriptions
+          settings.quickDescriptions
         }
-        onClose={
-          closeTransactionModal
+        onClose={() =>
+          setTransactionModalOpen(
+            false
+          )
         }
         onSave={saveTransaction}
       />
@@ -856,17 +1015,13 @@ function App() {
         open={
           adjustmentModalOpen
         }
-        currentBalance={
-          balance
-        }
+        currentBalance={balance}
         saving={saving}
-        onClose={() => {
-          if (!saving) {
-            setAdjustmentModalOpen(
-              false
-            );
-          }
-        }}
+        onClose={() =>
+          setAdjustmentModalOpen(
+            false
+          )
+        }
         onSave={
           handleCashAdjustment
         }
@@ -878,9 +1033,13 @@ function App() {
           selectedTransaction
         }
         saving={editing}
-        onClose={
-          closeEditModal
-        }
+        onClose={() => {
+          setEditModalOpen(false);
+
+          setSelectedTransaction(
+            null
+          );
+        }}
         onSave={
           saveEditedTransaction
         }
@@ -888,15 +1047,14 @@ function App() {
 
       <DeleteTransactionModal
         open={
-          deleteCandidate !==
-          null
+          deleteCandidate !== null
         }
         transaction={
           deleteCandidate
         }
         deleting={deleting}
-        onClose={
-          closeDeleteModal
+        onClose={() =>
+          setDeleteCandidate(null)
         }
         onConfirm={
           confirmDeleteTransaction
@@ -904,9 +1062,7 @@ function App() {
       />
 
       <DayEndModal
-        open={
-          dayEndModalOpen
-        }
+        open={dayEndModalOpen}
         transactions={
           todayTransactions
         }
@@ -924,6 +1080,59 @@ function App() {
           setDayEndModalOpen(
             false
           )
+        }
+      />
+
+      <LargeTransactionModal
+        open={
+          pendingLargeTransaction !==
+          null
+        }
+        type={
+          pendingLargeTransaction
+            ?.type ?? "income"
+        }
+        amount={
+          pendingLargeTransaction
+            ?.amount ?? 0
+        }
+        description={
+          pendingLargeTransaction
+            ?.description ?? ""
+        }
+        onConfirm={
+          confirmLargeTransaction
+        }
+        onCancel={() =>
+          setPendingLargeTransaction(
+            null
+          )
+        }
+      />
+
+      <UndoDeleteToast
+        transaction={
+          deletedTransaction
+        }
+        onUndo={
+          handleUndoDelete
+        }
+        onDismiss={() =>
+          setDeletedTransaction(null)
+        }
+      />
+
+      <DayEndReminderBanner
+        visible={showReminder}
+        onOpenDayEnd={() => {
+          dismissReminder();
+
+          setDayEndModalOpen(
+            true
+          );
+        }}
+        onDismiss={
+          dismissReminder
         }
       />
     </>

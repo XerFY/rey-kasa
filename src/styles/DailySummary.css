@@ -1,0 +1,61 @@
+.daily-summary {
+  display: grid;
+  grid-template-columns:
+    repeat(3, minmax(0, 1fr));
+  gap: 9px;
+
+  margin: -5px 0 20px;
+}
+
+.daily-summary article {
+  min-width: 0;
+  padding: 13px 10px;
+
+  border: 1px solid var(--border);
+  border-radius: 17px;
+
+  background: var(--surface);
+
+  box-shadow: var(--shadow);
+
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.daily-summary article > svg {
+  color: var(--primary);
+}
+
+.daily-summary span {
+  color: var(--text-secondary);
+
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.daily-summary strong {
+  overflow-wrap: anywhere;
+
+  font-size: clamp(
+    12px,
+    3.3vw,
+    15px
+  );
+
+  line-height: 1.25;
+}
+
+.daily-income {
+  color: var(--success);
+}
+
+.daily-expense {
+  color: var(--danger);
+}
+
+@media (max-width: 360px) {
+  .daily-summary {
+    grid-template-columns: 1fr;
+  }
+}

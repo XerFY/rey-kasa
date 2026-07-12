@@ -98,7 +98,99 @@ export async function saveDayEnd({
     record
   );
 }
+export async function updateClosedDayAfterChange(
+  record: DayEndRecord,
+  before: Transaction | null,
+  after: Transaction | null
+): Promise<void> {
+  let updatedTransactions =
+    record.transactions.filter(
+      (transaction) =>
+        transaction.id !== before?.id &&
+        transaction.id !== after?.id
+    );
 
+  if (after) {
+    updatedTransactions = [
+      ...updatedTransactions,
+      after,
+    ].sort(
+      (first, second) =>
+        second.createdAt -
+        first.createdAt
+    );
+  }
+
+  const beforeAmount =
+    before === null
+      ? 0
+      : before.type === "income"
+        ? before.amount
+        : -before.amount;
+
+  const afterAmount =
+    after === null
+      ? 0
+      : after.type === "income"
+        ? after.amount
+        : -after.amount;
+
+  const totalIncome =
+    updatedTransactions
+      .filter(
+        (transaction) =>
+          transaction.type === "income"
+      )
+      .reduce(
+        (total, transaction) =>
+          total + transaction.amount,
+        0
+      );
+
+  const totalExpense =
+    updatedTransactions
+      .filter(
+        (transaction) =>
+          transaction.type === "expense"
+      )
+      .reduce(
+        (total, transaction) =>
+          total + transaction.amount,
+        0
+      );
+
+  await setDoc(
+    doc(
+      db,
+      "dayEnds",
+      record.id
+    ),
+    {
+      dateKey: record.dateKey,
+      closedAt: record.closedAt,
+
+      totalIncome,
+      totalExpense,
+
+      netTotal:
+        totalIncome -
+        totalExpense,
+
+      balance:
+        record.balance +
+        afterAmount -
+        beforeAmount,
+
+      transactionCount:
+        updatedTransactions.length,
+
+      transactions:
+        updatedTransactions,
+
+      updatedAt: Date.now(),
+    }
+  );
+}
 export function listenDayEnds(
   onData: (
     records: DayEndRecord[]

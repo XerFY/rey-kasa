@@ -6,16 +6,21 @@ import {
 } from "lucide-react";
 
 import BalanceCard from "../components/BalanceCard";
+import ConnectionStatus from "../components/ConnectionStatus";
+import DailySummary from "../components/DailySummary";
 import Header from "../components/Header";
 import TransactionList from "../components/TransactionList";
-import ConnectionStatus from "../components/ConnectionStatus";
+
 import type { Transaction } from "../types/Transaction";
 
 type Props = {
   transactions: Transaction[];
+  todayTransactions: Transaction[];
+
   loading: boolean;
   saving: boolean;
   syncError: string;
+  hasPendingWrites: boolean;
 
   balance: number;
   todayTransactionCount: number;
@@ -24,6 +29,7 @@ type Props = {
   onAddIncome: () => void;
   onAddExpense: () => void;
   onAdjustBalance: () => void;
+
   onShowAllTransactions: () => void;
   onDayEnd: () => void;
 
@@ -38,9 +44,11 @@ type Props = {
 
 function HomePage({
   transactions,
+  todayTransactions,
   loading,
   saving,
   syncError,
+  hasPendingWrites,
   balance,
   todayTransactionCount,
   lastUpdate,
@@ -60,9 +68,12 @@ function HomePage({
       <Header />
 
       <ConnectionStatus
-  loading={loading}
-  syncError={syncError}
-/>
+        loading={loading}
+        syncError={syncError}
+        hasPendingWrites={
+          hasPendingWrites
+        }
+      />
 
       <BalanceCard
         balance={balance}
@@ -70,6 +81,12 @@ function HomePage({
           todayTransactionCount
         }
         lastUpdate={lastUpdate}
+      />
+
+      <DailySummary
+        transactions={
+          todayTransactions
+        }
       />
 
       <div className="buttons">

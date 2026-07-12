@@ -1,0 +1,73 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function validTransaction(data) {
+      return
+        data.keys().hasOnly([
+          "type",
+          "amount",
+          "description",
+          "createdAt"
+        ]) &&
+        (
+          data.type == "income" ||
+          data.type == "expense"
+        ) &&
+        data.amount is number &&
+        data.amount > 0 &&
+        data.amount <= 1000000000000 &&
+        data.description is string &&
+        data.description.size() >= 1 &&
+        data.description.size() <= 120 &&
+        data.createdAt is number;
+    }
+
+    match /transactions/{transactionId} {
+      allow read: if signedIn();
+
+      allow create, update: if
+        signedIn() &&
+        validTransaction(request.resource.data);
+
+      allow delete: if signedIn();
+    }
+
+    match /dayEnds/{dayEndId} {
+      allow read, create, update:
+        if signedIn();
+
+      allow delete: if false;
+    }
+
+    match /settings/{settingsId} {
+      allow read, create, update:
+        if signedIn();
+
+      allow delete: if false;
+    }
+
+    match /auditLogs/{auditId} {
+      allow read, create:
+        if signedIn();
+
+      allow update, delete:
+        if false;
+    }
+
+    match /printJobs/{printJobId} {
+      allow read, create, update:
+        if signedIn();
+
+      allow delete: if signedIn();
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

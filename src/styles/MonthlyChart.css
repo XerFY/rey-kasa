@@ -1,0 +1,138 @@
+.monthly-chart-card {
+  margin-top: 20px;
+  padding: 18px;
+
+  border: 1px solid var(--border);
+  border-radius: 22px;
+
+  background: var(--surface);
+
+  box-shadow: var(--shadow);
+}
+
+.monthly-chart-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 15px;
+
+  margin-bottom: 20px;
+}
+
+.monthly-chart-heading h2 {
+  color: var(--text);
+  font-size: 17px;
+}
+
+.monthly-chart-heading p {
+  margin-top: 4px;
+
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.monthly-chart-legend {
+  flex-shrink: 0;
+
+  display: flex;
+  gap: 9px;
+}
+
+.monthly-chart-legend span {
+  color: var(--text-secondary);
+
+  font-size: 10px;
+
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.monthly-chart-legend i {
+  width: 8px;
+  height: 8px;
+
+  border-radius: 3px;
+}
+
+.legend-income {
+  background: var(--success);
+}
+
+.legend-expense {
+  background: var(--danger);
+}
+
+.monthly-chart-scroll {
+  overflow-x: auto;
+
+  padding-bottom: 4px;
+
+  -webkit-overflow-scrolling: touch;
+}
+
+.monthly-chart {
+  min-width: 100%;
+
+  height: 180px;
+
+  display: flex;
+  align-items: flex-end;
+  gap: 9px;
+}
+
+.monthly-chart-day {
+  min-width: 30px;
+  height: 100%;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 7px;
+}
+
+.monthly-chart-bars {
+  height: 145px;
+
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 3px;
+}
+
+.monthly-bar {
+  width: 10px;
+  min-height: 2px;
+
+  border-radius: 5px 5px 2px 2px;
+
+  transition: height 0.25s ease;
+}
+
+.monthly-income-bar {
+  background: var(--success);
+}
+
+.monthly-expense-bar {
+  background: var(--danger);
+}
+
+.monthly-chart-day small {
+  color: var(--text-muted);
+
+  font-size: 9px;
+  text-align: center;
+}
+
+.monthly-chart-empty {
+  padding: 28px 15px;
+
+  border: 1px dashed var(--border);
+  border-radius: 17px;
+
+  background: var(--surface-soft);
+  color: var(--text-secondary);
+
+  font-size: 12px;
+  text-align: center;
+}
