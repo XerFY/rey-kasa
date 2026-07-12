@@ -11,13 +11,18 @@ import "../styles/Modal.css";
 type Props = {
   open: boolean;
   type: "income" | "expense";
+  quickDescriptions: string[];
   onClose: () => void;
-  onSave: (amount: number, description: string) => void | Promise<void>;
+  onSave: (
+    amount: number,
+    description: string
+  ) => void | Promise<void>;
 };
 
 function AddTransactionModal({
   open,
   type,
+  quickDescriptions,
   onClose,
   onSave,
 }: Props) {

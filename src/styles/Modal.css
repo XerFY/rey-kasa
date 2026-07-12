@@ -233,3 +233,57 @@
     min-height: 48px;
   }
 }
+.quick-description-area {
+  margin-top: 17px;
+}
+
+.quick-description-title {
+  display: block;
+  margin-bottom: 9px;
+
+  color: var(--text-secondary);
+
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.quick-description-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.quick-description-button {
+  min-height: 39px;
+  max-width: 100%;
+
+  padding: 0 13px;
+
+  border: 1px solid var(--border);
+  border-radius: 999px;
+
+  background: var(--surface);
+  color: var(--text-secondary);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+
+  overflow: hidden;
+
+  font-size: 12px;
+  font-weight: 750;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  cursor: pointer;
+}
+
+.quick-description-button.selected {
+  border-color: var(--primary);
+
+  background: var(--primary-soft);
+  color: var(--primary);
+}

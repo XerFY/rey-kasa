@@ -553,11 +553,14 @@ function App() {
       />
 
       <AddTransactionModal
-        open={transactionModalOpen}
-        type={transactionType}
-        onClose={closeTransactionModal}
-        onSave={saveTransaction}
-      />
+  open={transactionModalOpen}
+  type={transactionType}
+  quickDescriptions={
+    quickDescriptions
+  }
+  onClose={closeTransactionModal}
+  onSave={saveTransaction}
+/>
 
       <EditTransactionModal
         open={editModalOpen}

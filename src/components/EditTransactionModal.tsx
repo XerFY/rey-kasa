@@ -31,11 +31,17 @@ function EditTransactionModal({
 }: Props) {
   const [type, setType] =
     useState<Transaction["type"]>("income");
-  const [amount, setAmount] = useState("");
-  const [description, setDescription] = useState("");
+
+  const [amount, setAmount] =
+    useState("");
+
+  const [description, setDescription] =
+    useState("");
 
   useEffect(() => {
-    if (!open || !transaction) return;
+    if (!open || !transaction) {
+      return;
+    }
 
     setType(transaction.type);
     setAmount(String(transaction.amount));
@@ -43,13 +49,19 @@ function EditTransactionModal({
   }, [open, transaction]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      return;
+    }
 
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const previousOverflow =
+      document.body.style.overflow;
+
+    document.body.style.overflow =
+      "hidden";
 
     return () => {
-      document.body.style.overflow = previousOverflow;
+      document.body.style.overflow =
+        previousOverflow;
     };
   }, [open]);
 
@@ -57,18 +69,25 @@ function EditTransactionModal({
     return null;
   }
 
-  const currentTransaction = transaction;
+  const currentTransaction =
+    transaction;
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(
+    event: FormEvent<HTMLFormElement>
+  ) {
     event.preventDefault();
 
     const normalizedAmount = amount
       .replace(/\./g, "")
       .replace(",", ".");
 
-    const numericAmount = Number(normalizedAmount);
+    const numericAmount =
+      Number(normalizedAmount);
 
-    if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+    if (
+      !Number.isFinite(numericAmount) ||
+      numericAmount <= 0
+    ) {
       return;
     }
 
@@ -77,15 +96,22 @@ function EditTransactionModal({
       type,
       numericAmount,
       description.trim() ||
-        (type === "income" ? "Gelir" : "Gider")
+        (type === "income"
+          ? "Gelir"
+          : "Gider")
     );
   }
 
   return (
-    <div className="edit-overlay" onClick={onClose}>
+    <div
+      className="edit-overlay"
+      onClick={onClose}
+    >
       <section
         className="edit-sheet"
-        onClick={(event) => event.stopPropagation()}
+        onClick={(event) =>
+          event.stopPropagation()
+        }
       >
         <div className="edit-handle" />
 
@@ -115,9 +141,13 @@ function EditTransactionModal({
             <button
               type="button"
               className={
-                type === "income" ? "selected-income" : ""
+                type === "income"
+                  ? "selected-income"
+                  : ""
               }
-              onClick={() => setType("income")}
+              onClick={() =>
+                setType("income")
+              }
             >
               Gelir
             </button>
@@ -125,15 +155,22 @@ function EditTransactionModal({
             <button
               type="button"
               className={
-                type === "expense" ? "selected-expense" : ""
+                type === "expense"
+                  ? "selected-expense"
+                  : ""
               }
-              onClick={() => setType("expense")}
+              onClick={() =>
+                setType("expense")
+              }
             >
               Gider
             </button>
           </div>
 
-          <label className="edit-label" htmlFor="edit-amount">
+          <label
+            className="edit-label"
+            htmlFor="edit-amount"
+          >
             Tutar
           </label>
 
@@ -145,7 +182,11 @@ function EditTransactionModal({
               type="text"
               inputMode="decimal"
               value={amount}
-              onChange={(event) => setAmount(event.target.value)}
+              onChange={(event) =>
+                setAmount(
+                  event.target.value
+                )
+              }
               autoComplete="off"
             />
           </div>
@@ -163,7 +204,9 @@ function EditTransactionModal({
             type="text"
             value={description}
             onChange={(event) =>
-              setDescription(event.target.value)
+              setDescription(
+                event.target.value
+              )
             }
             maxLength={80}
             autoComplete="off"
