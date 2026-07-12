@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from "react";
 import { Printer, X } from "lucide-react";
-
+import { printDayEndReport } from "../services/printService";
 import "../styles/DayEndModal.css";
 
 import type { Transaction } from "../types/Transaction";
@@ -53,8 +53,11 @@ function DayEndModal({
   if (!open) return null;
 
   function handlePrint() {
-    window.print();
-  }
+  printDayEndReport({
+    transactions,
+    balance,
+  });
+}
 
   return (
     <div className="day-end-overlay" onClick={onClose}>
