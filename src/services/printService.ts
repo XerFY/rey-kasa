@@ -198,7 +198,55 @@ export function printDayEndReport({
             text-align: center;
             font-size: 10px;
           }
+          .preview-actions {
+  position: sticky;
+  top: 0;
+  z-index: 10;
 
+  width: 74mm;
+
+  margin-bottom: 12px;
+  padding: 10px;
+
+  border-bottom: 1px solid #ddd;
+
+  background: #ffffff;
+
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+
+  font-family:
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+}
+
+.preview-actions button {
+  min-height: 44px;
+
+  border-radius: 12px;
+
+  font-size: 14px;
+  font-weight: 700;
+
+  cursor: pointer;
+}
+
+.preview-close {
+  border: 1px solid #d1d5db;
+
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.preview-print {
+  border: 1px solid #c79a2b;
+
+  background: #c79a2b;
+  color: #ffffff;
+}
           @media screen {
             body {
               margin: 20px auto;
@@ -206,15 +254,36 @@ export function printDayEndReport({
           }
 
           @media print {
-            html,
-            body {
-              width: 74mm;
-            }
-          }
+  .preview-actions {
+    display: none !important;
+  }
+
+  html,
+  body {
+    width: 74mm;
+  }
+}
         </style>
       </head>
 
       <body>
+      <div class="preview-actions">
+  <button
+    type="button"
+    class="preview-close"
+    onclick="window.close()"
+  >
+    Geri Dön
+  </button>
+
+  <button
+    type="button"
+    class="preview-print"
+    onclick="window.print()"
+  >
+    Yazdır
+  </button>
+</div>
         <main class="receipt">
           <header class="center">
             <h1 class="title">REY KASA</h1>
@@ -266,11 +335,4 @@ export function printDayEndReport({
   `);
 
   printWindow.document.close();
-
-  printWindow.addEventListener("load", () => {
-    window.setTimeout(() => {
-      printWindow.focus();
-      printWindow.print();
-    }, 150);
-  });
 }
