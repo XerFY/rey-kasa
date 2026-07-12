@@ -309,3 +309,39 @@
     grid-template-columns: 1fr;
   }
 }
+.custom-date-area {
+  grid-template-columns:
+    minmax(0, 1fr)
+    minmax(0, 1fr);
+}
+
+.custom-date-area label {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.custom-date-area input {
+  display: block;
+
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+
+  box-sizing: border-box;
+
+  font-size: 16px;
+}
+
+@media (max-width: 520px) {
+  .custom-date-area {
+    grid-template-columns: 1fr;
+  }
+
+  .custom-date-area label {
+    width: 100%;
+  }
+
+  .custom-date-area input {
+    width: 100%;
+  }
+}

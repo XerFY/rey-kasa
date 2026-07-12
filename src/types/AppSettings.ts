@@ -10,8 +10,10 @@ export type QuickDescription = {
 
 export type AppSettings = {
   quickDescriptions: QuickDescription[];
+  openingBalance: number;
 };
 
 export const defaultAppSettings: AppSettings = {
   quickDescriptions: [],
+  openingBalance: 0,
 };

@@ -43,34 +43,49 @@ function isQuickDescription(
 }
 
 export function listenSettings(
-  onData: (settings: AppSettings) => void,
+  onData: (
+    settings: AppSettings
+  ) => void,
   onError: (error: Error) => void
 ): Unsubscribe {
   return onSnapshot(
     settingsDocument,
     (snapshot) => {
       if (!snapshot.exists()) {
-        onData(defaultAppSettings);
+        onData(
+          defaultAppSettings
+        );
+
         return;
       }
 
-      const data = snapshot.data();
+      const data =
+        snapshot.data();
 
       const rawDescriptions =
         data.quickDescriptions;
 
-      if (!Array.isArray(rawDescriptions)) {
-        onData(defaultAppSettings);
-        return;
-      }
-
       const quickDescriptions =
-        rawDescriptions.filter(
-          isQuickDescription
-        );
+        Array.isArray(
+          rawDescriptions
+        )
+          ? rawDescriptions.filter(
+              isQuickDescription
+            )
+          : [];
+
+      const openingBalance =
+        typeof data.openingBalance ===
+          "number" &&
+        Number.isFinite(
+          data.openingBalance
+        )
+          ? data.openingBalance
+          : 0;
 
       onData({
         quickDescriptions,
+        openingBalance,
       });
     },
     onError
@@ -85,7 +100,8 @@ export async function saveQuickDescriptions(
       .map((description) => ({
         id: description.id,
         type: description.type,
-        label: description.label.trim(),
+        label:
+          description.label.trim(),
       }))
       .filter(
         (description) =>
@@ -98,6 +114,30 @@ export async function saveQuickDescriptions(
     {
       quickDescriptions:
         cleanDescriptions,
+    },
+    {
+      merge: true,
+    }
+  );
+}
+
+export async function saveOpeningBalance(
+  openingBalance: number
+): Promise<void> {
+  if (
+    !Number.isFinite(
+      openingBalance
+    )
+  ) {
+    throw new Error(
+      "Geçersiz başlangıç kasa tutarı."
+    );
+  }
+
+  await setDoc(
+    settingsDocument,
+    {
+      openingBalance,
     },
     {
       merge: true,
