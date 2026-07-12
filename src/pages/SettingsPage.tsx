@@ -12,6 +12,8 @@ import {
 
 import "../styles/SettingsPage.css";
 
+import OpeningBalanceCard from "../components/OpeningBalanceCard";
+
 import type {
   QuickDescription,
   QuickDescriptionType,
@@ -19,39 +21,42 @@ import type {
 
 type Props = {
   quickDescriptions: QuickDescription[];
+  openingBalance: number;
   loading: boolean;
   saving: boolean;
+
   onSaveQuickDescriptions: (
     descriptions: QuickDescription[]
+  ) => void | Promise<void>;
+
+  onSaveOpeningBalance: (
+    amount: number
   ) => void | Promise<void>;
 };
 
 function SettingsPage({
   quickDescriptions,
+  openingBalance,
   loading,
   saving,
   onSaveQuickDescriptions,
+  onSaveOpeningBalance,
 }: Props) {
   const [newDescription, setNewDescription] =
     useState("");
 
   const [selectedType, setSelectedType] =
-    useState<QuickDescriptionType>(
-      "expense"
-    );
+    useState<QuickDescriptionType>("expense");
 
   const [savedMessage, setSavedMessage] =
     useState(false);
 
   useEffect(() => {
-    if (!savedMessage) {
-      return;
-    }
+    if (!savedMessage) return;
 
-    const timeout =
-      window.setTimeout(() => {
-        setSavedMessage(false);
-      }, 1800);
+    const timeout = window.setTimeout(() => {
+      setSavedMessage(false);
+    }, 1800);
 
     return () => {
       window.clearTimeout(timeout);
@@ -75,24 +80,18 @@ function SettingsPage({
   ) {
     event.preventDefault();
 
-    const cleanLabel =
-      newDescription.trim();
+    const cleanLabel = newDescription.trim();
 
-    if (!cleanLabel) {
-      return;
-    }
+    if (!cleanLabel) return;
 
     const alreadyExists =
       quickDescriptions.some(
         (description) =>
-          description.type ===
-            selectedType &&
+          description.type === selectedType &&
           description.label.toLocaleLowerCase(
             "tr-TR"
           ) ===
-            cleanLabel.toLocaleLowerCase(
-              "tr-TR"
-            )
+            cleanLabel.toLocaleLowerCase("tr-TR")
       );
 
     if (alreadyExists) {
@@ -115,13 +114,10 @@ function SettingsPage({
     setSavedMessage(true);
   }
 
-  async function handleDelete(
-    id: string
-  ) {
+  async function handleDelete(id: string) {
     await onSaveQuickDescriptions(
       quickDescriptions.filter(
-        (description) =>
-          description.id !== id
+        (description) => description.id !== id
       )
     );
 
@@ -146,9 +142,7 @@ function SettingsPage({
             {title}
           </span>
 
-          <small>
-            {descriptions.length} kayıt
-          </small>
+          <small>{descriptions.length} kayıt</small>
         </div>
 
         {descriptions.length === 0 ? (
@@ -157,31 +151,25 @@ function SettingsPage({
           </div>
         ) : (
           <div className="description-list">
-            {descriptions.map(
-              (description) => (
-                <div
-                  className="description-item"
-                  key={description.id}
-                >
-                  <span>
-                    {description.label}
-                  </span>
+            {descriptions.map((description) => (
+              <div
+                className="description-item"
+                key={description.id}
+              >
+                <span>{description.label}</span>
 
-                  <button
-                    type="button"
-                    onClick={() =>
-                      void handleDelete(
-                        description.id
-                      )
-                    }
-                    disabled={saving}
-                    aria-label={`${description.label} açıklamasını sil`}
-                  >
-                    <Trash2 size={18} />
-                  </button>
-                </div>
-              )
-            )}
+                <button
+                  type="button"
+                  onClick={() =>
+                    void handleDelete(description.id)
+                  }
+                  disabled={saving}
+                  aria-label={`${description.label} açıklamasını sil`}
+                >
+                  <Trash2 size={18} />
+                </button>
+              </div>
+            ))}
           </div>
         )}
       </div>
@@ -195,26 +183,29 @@ function SettingsPage({
         <h1>Ayarlar</h1>
 
         <p>
-          Gelir ve gider ekranlarında
-          kullanılacak hazır açıklamaları
-          düzenle.
+          Kasa ve günlük kullanım seçeneklerini
+          buradan düzenleyebilirsin.
         </p>
       </header>
+
+      <OpeningBalanceCard
+        openingBalance={openingBalance}
+        saving={saving}
+        onSave={onSaveOpeningBalance}
+      />
 
       <article className="settings-card">
         <div className="settings-card-title">
           <div className="settings-card-icon">
-            <MessageSquareText
-              size={22}
-            />
+            <MessageSquareText size={22} />
           </div>
 
           <div>
             <h2>Hazır Açıklamalar</h2>
 
             <p>
-              Açıklamanın gelir veya gider
-              ekranında gösterileceğini seç.
+              Açıklamanın gelir veya gider ekranında
+              gösterileceğini seç.
             </p>
           </div>
         </div>
@@ -227,9 +218,7 @@ function SettingsPage({
                 ? "settings-income-selected"
                 : ""
             }
-            onClick={() =>
-              setSelectedType("income")
-            }
+            onClick={() => setSelectedType("income")}
           >
             Gelir
           </button>
@@ -241,9 +230,7 @@ function SettingsPage({
                 ? "settings-expense-selected"
                 : ""
             }
-            onClick={() =>
-              setSelectedType("expense")
-            }
+            onClick={() => setSelectedType("expense")}
           >
             Gider
           </button>
@@ -262,9 +249,7 @@ function SettingsPage({
             }
             value={newDescription}
             onChange={(event) =>
-              setNewDescription(
-                event.target.value
-              )
+              setNewDescription(event.target.value)
             }
             maxLength={40}
             disabled={saving}
@@ -272,10 +257,7 @@ function SettingsPage({
 
           <button
             type="submit"
-            disabled={
-              saving ||
-              !newDescription.trim()
-            }
+            disabled={saving || !newDescription.trim()}
           >
             <Plus size={20} />
             Ekle
@@ -310,8 +292,7 @@ function SettingsPage({
         )}
 
         <footer className="settings-card-footer">
-          Toplam {quickDescriptions.length}{" "}
-          hazır açıklama
+          Toplam {quickDescriptions.length} hazır açıklama
         </footer>
       </article>
     </section>

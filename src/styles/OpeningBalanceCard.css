@@ -1,0 +1,153 @@
+.opening-balance-card {
+  margin-bottom: 18px;
+  padding: 19px;
+
+  border: 1px solid var(--border);
+  border-radius: 23px;
+
+  background: var(--surface);
+
+  box-shadow: var(--shadow);
+}
+
+.opening-balance-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 13px;
+}
+
+.opening-balance-icon {
+  width: 46px;
+  height: 46px;
+  flex-shrink: 0;
+
+  border-radius: 15px;
+
+  background: var(--primary-soft);
+  color: var(--primary);
+
+  display: grid;
+  place-items: center;
+}
+
+.opening-balance-heading h2 {
+  color: var(--text);
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.opening-balance-heading p {
+  margin-top: 5px;
+
+  color: var(--text-secondary);
+
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.opening-balance-form {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 9px;
+
+  margin-top: 19px;
+}
+
+.opening-balance-input {
+  min-height: 54px;
+
+  padding: 0 15px;
+
+  border: 1px solid var(--border);
+  border-radius: 15px;
+
+  background: var(--surface-soft);
+
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.opening-balance-input span {
+  color: var(--primary);
+  font-size: 20px;
+  font-weight: 850;
+}
+
+.opening-balance-input input {
+  width: 100%;
+  min-width: 0;
+
+  border: 0;
+  outline: 0;
+
+  background: transparent;
+  color: var(--text);
+
+  font-size: 19px;
+  font-weight: 800;
+}
+
+.opening-balance-form > button {
+  min-height: 54px;
+  padding: 0 17px;
+
+  border: 1px solid var(--primary);
+  border-radius: 15px;
+
+  background: var(--primary);
+  color: #ffffff;
+
+  font-size: 14px;
+  font-weight: 800;
+
+  cursor: pointer;
+}
+
+.opening-balance-form button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.opening-balance-saved {
+  width: fit-content;
+
+  margin-top: 12px;
+  padding: 7px 10px;
+
+  border-radius: 999px;
+
+  background: color-mix(
+    in srgb,
+    var(--success) 10%,
+    transparent
+  );
+
+  color: var(--success);
+
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.opening-balance-warning {
+  margin-top: 14px;
+  padding: 11px;
+
+  border-radius: 13px;
+
+  background: var(--primary-soft);
+  color: var(--text-secondary);
+
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+@media (max-width: 380px) {
+  .opening-balance-form {
+    grid-template-columns: 1fr;
+  }
+}

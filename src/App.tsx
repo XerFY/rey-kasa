@@ -5,14 +5,7 @@ import {
 } from "react";
 
 import "./App.css";
-import {
-  listenDayEnds,
-  saveDayEnd,
-} from "./services/dayEndService";
 
-import type {
-  DayEndRecord,
-} from "./types/DayEndRecord";
 import AddTransactionModal from "./components/AddTransactionModal";
 import BottomNavigation, {
   type AppPage,
@@ -27,7 +20,13 @@ import SettingsPage from "./pages/SettingsPage";
 import TransactionsPage from "./pages/TransactionsPage";
 
 import {
+  listenDayEnds,
+  saveDayEnd,
+} from "./services/dayEndService";
+
+import {
   listenSettings,
+  saveOpeningBalance,
   saveQuickDescriptions,
 } from "./services/settingsService";
 
@@ -42,7 +41,9 @@ import {
 import type {
   QuickDescription,
 } from "./types/AppSettings";
-
+import type {
+  DayEndRecord,
+} from "./types/DayEndRecord";
 import type {
   Transaction,
 } from "./types/Transaction";
@@ -58,52 +59,35 @@ function isSameDay(
   const date = new Date(timestamp);
 
   return (
-    date.getDate() ===
-      targetDate.getDate() &&
-    date.getMonth() ===
-      targetDate.getMonth() &&
-    date.getFullYear() ===
-      targetDate.getFullYear()
+    date.getDate() === targetDate.getDate() &&
+    date.getMonth() === targetDate.getMonth() &&
+    date.getFullYear() === targetDate.getFullYear()
   );
 }
 
-function App() {
-  const [
-    transactions,
-    setTransactions,
-  ] = useState<Transaction[]>([]);
+function createDateKey(date: Date): string {
+  const year = date.getFullYear();
 
-  async function handleArchiveDayEnd():
-  Promise<void> {
-  try {
-    setArchivingDayEnd(true);
-    setSyncError("");
+  const month = String(
+    date.getMonth() + 1
+  ).padStart(2, "0");
 
-    await saveDayEnd({
-      transactions:
-        todayTransactions,
-      balance,
-    });
-  } catch (error) {
-    console.error(
-      "Gün sonu kaydetme hatası:",
-      error
-    );
+  const day = String(
+    date.getDate()
+  ).padStart(2, "0");
 
-    setSyncError(
-      error instanceof Error
-        ? `Gün sonu kaydedilemedi: ${error.message}`
-        : "Gün sonu kaydedilemedi."
-    );
-  } finally {
-    setArchivingDayEnd(false);
-  }
+  return `${year}-${month}-${day}`;
 }
 
-  const [
-    activePage,
-    setActivePage,
-  ] = useState<AppPage>("home");
+function App() {
+  const [transactions, setTransactions] =
+    useState<Transaction[]>([]);
+
+  const [dayEnds, setDayEnds] =
+    useState<DayEndRecord[]>([]);
+
+  const [activePage, setActivePage] =
+    useState<AppPage>("home");
 
   const [
     transactionModalOpen,
@@ -115,38 +99,31 @@ function App() {
     setDayEndModalOpen,
   ] = useState(false);
 
-  const [
-    editModalOpen,
-    setEditModalOpen,
-  ] = useState(false);
+  const [editModalOpen, setEditModalOpen] =
+    useState(false);
 
   const [
     selectedTransaction,
     setSelectedTransaction,
-  ] = useState<Transaction | null>(
-    null
-  );
+  ] = useState<Transaction | null>(null);
 
   const [
     deleteCandidate,
     setDeleteCandidate,
-  ] = useState<Transaction | null>(
-    null
-  );
+  ] = useState<Transaction | null>(null);
 
   const [
     transactionType,
     setTransactionType,
-  ] = useState<TransactionType>(
-    "income"
-  );
+  ] = useState<TransactionType>("income");
 
   const [
     quickDescriptions,
     setQuickDescriptions,
-  ] = useState<
-    QuickDescription[]
-  >([]);
+  ] = useState<QuickDescription[]>([]);
+
+  const [openingBalance, setOpeningBalance] =
+    useState(0);
 
   const [loading, setLoading] =
     useState(true);
@@ -165,21 +142,18 @@ function App() {
     setSettingsLoading,
   ] = useState(true);
 
-  const [dayEnds, setDayEnds] =
-  useState<DayEndRecord[]>([]);
-
-const [archivingDayEnd, setArchivingDayEnd] =
-  useState(false);
-
   const [
     settingsSaving,
     setSettingsSaving,
   ] = useState(false);
 
   const [
-    syncError,
-    setSyncError,
-  ] = useState("");
+    archivingDayEnd,
+    setArchivingDayEnd,
+  ] = useState(false);
+
+  const [syncError, setSyncError] =
+    useState("");
 
   useEffect(() => {
     let unsubscribe:
@@ -195,47 +169,33 @@ const [archivingDayEnd, setArchivingDayEnd] =
 
         await connectFirebase();
 
-        if (!mounted) {
-          return;
-        }
+        if (!mounted) return;
 
-        unsubscribe =
-          listenTransactions(
-            (
-              firebaseTransactions
-            ) => {
-              if (!mounted) {
-                return;
-              }
+        unsubscribe = listenTransactions(
+          (firebaseTransactions) => {
+            if (!mounted) return;
 
-              setTransactions(
-                firebaseTransactions
-              );
+            setTransactions(firebaseTransactions);
+            setLoading(false);
+            setSyncError("");
+          },
+          (error) => {
+            if (!mounted) return;
 
-              setLoading(false);
-              setSyncError("");
-            },
-            (error) => {
-              if (!mounted) {
-                return;
-              }
+            console.error(
+              "Firestore dinleme hatası:",
+              error
+            );
 
-              console.error(
-                "Firestore dinleme hatası:",
-                error
-              );
+            setLoading(false);
 
-              setLoading(false);
-
-              setSyncError(
-                `Bulut bağlantı hatası: ${error.message}`
-              );
-            }
-          );
+            setSyncError(
+              `Bulut bağlantı hatası: ${error.message}`
+            );
+          }
+        );
       } catch (error) {
-        if (!mounted) {
-          return;
-        }
+        if (!mounted) return;
 
         console.error(
           "Firebase başlatma hatası:",
@@ -261,60 +221,6 @@ const [archivingDayEnd, setArchivingDayEnd] =
   }, []);
 
   useEffect(() => {
-  let unsubscribe:
-    | (() => void)
-    | undefined;
-
-  let mounted = true;
-
-  async function startDayEnds() {
-    try {
-      await connectFirebase();
-
-      if (!mounted) {
-        return;
-      }
-
-      unsubscribe = listenDayEnds(
-        (records) => {
-          if (!mounted) {
-            return;
-          }
-
-          setDayEnds(records);
-        },
-        (error) => {
-          if (!mounted) {
-            return;
-          }
-
-          console.error(
-            "Gün sonu arşiv hatası:",
-            error
-          );
-
-          setSyncError(
-            `Gün sonları yüklenemedi: ${error.message}`
-          );
-        }
-      );
-    } catch (error) {
-      console.error(
-        "Gün sonu bağlantı hatası:",
-        error
-      );
-    }
-  }
-
-  void startDayEnds();
-
-  return () => {
-    mounted = false;
-    unsubscribe?.();
-  };
-}, []);
-
-  useEffect(() => {
     let unsubscribe:
       | (() => void)
       | undefined;
@@ -327,48 +233,39 @@ const [archivingDayEnd, setArchivingDayEnd] =
 
         await connectFirebase();
 
-        if (!mounted) {
-          return;
-        }
+        if (!mounted) return;
 
-        unsubscribe =
-          listenSettings(
-            (settings) => {
-              if (!mounted) {
-                return;
-              }
+        unsubscribe = listenSettings(
+          (settings) => {
+            if (!mounted) return;
 
-              setQuickDescriptions(
-                settings.quickDescriptions
-              );
+            setQuickDescriptions(
+              settings.quickDescriptions
+            );
 
-              setSettingsLoading(
-                false
-              );
-            },
-            (error) => {
-              if (!mounted) {
-                return;
-              }
+            setOpeningBalance(
+              settings.openingBalance
+            );
 
-              console.error(
-                "Ayarları okuma hatası:",
-                error
-              );
+            setSettingsLoading(false);
+          },
+          (error) => {
+            if (!mounted) return;
 
-              setSettingsLoading(
-                false
-              );
+            console.error(
+              "Ayarları okuma hatası:",
+              error
+            );
 
-              setSyncError(
-                `Ayarlar yüklenemedi: ${error.message}`
-              );
-            }
-          );
+            setSettingsLoading(false);
+
+            setSyncError(
+              `Ayarlar yüklenemedi: ${error.message}`
+            );
+          }
+        );
       } catch (error) {
-        if (!mounted) {
-          return;
-        }
+        if (!mounted) return;
 
         console.error(
           "Ayar bağlantı hatası:",
@@ -393,22 +290,67 @@ const [archivingDayEnd, setArchivingDayEnd] =
     };
   }, []);
 
+  useEffect(() => {
+    let unsubscribe:
+      | (() => void)
+      | undefined;
+
+    let mounted = true;
+
+    async function startDayEnds() {
+      try {
+        await connectFirebase();
+
+        if (!mounted) return;
+
+        unsubscribe = listenDayEnds(
+          (records) => {
+            if (!mounted) return;
+
+            setDayEnds(records);
+          },
+          (error) => {
+            if (!mounted) return;
+
+            console.error(
+              "Gün sonu arşiv hatası:",
+              error
+            );
+
+            setSyncError(
+              `Gün sonları yüklenemedi: ${error.message}`
+            );
+          }
+        );
+      } catch (error) {
+        console.error(
+          "Gün sonu bağlantı hatası:",
+          error
+        );
+      }
+    }
+
+    void startDayEnds();
+
+    return () => {
+      mounted = false;
+      unsubscribe?.();
+    };
+  }, []);
+
   const balance = useMemo(() => {
     return transactions.reduce(
-      (
-        total,
-        transaction
-      ) => {
-        return transaction.type ===
-          "income"
-          ? total +
-              transaction.amount
-          : total -
-              transaction.amount;
+      (total, transaction) => {
+        return transaction.type === "income"
+          ? total + transaction.amount
+          : total - transaction.amount;
       },
-      0
+      openingBalance
     );
-  }, [transactions]);
+  }, [
+    transactions,
+    openingBalance,
+  ]);
 
   const todayTransactions =
     useMemo(() => {
@@ -423,36 +365,26 @@ const [archivingDayEnd, setArchivingDayEnd] =
       );
     }, [transactions]);
 
+  const todayDateKey =
+    createDateKey(new Date());
+
+  const todayAlreadyArchived =
+    dayEnds.some(
+      (record) =>
+        record.dateKey === todayDateKey
+    );
+
   const lastUpdate =
     transactions.length > 0
       ? new Date(
           transactions[0].createdAt
-        ).toLocaleString(
-          "tr-TR",
-          {
-            day: "2-digit",
-            month: "2-digit",
-            hour: "2-digit",
-            minute: "2-digit",
-          }
-        )
+        ).toLocaleString("tr-TR", {
+          day: "2-digit",
+          month: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+        })
       : "Henüz işlem yok";
-
-        const todayDateKey = [
-  new Date().getFullYear(),
-  String(
-    new Date().getMonth() + 1
-  ).padStart(2, "0"),
-  String(
-    new Date().getDate()
-  ).padStart(2, "0"),
-].join("-");
-
-const todayAlreadyArchived =
-  dayEnds.some(
-    (record) =>
-      record.dateKey === todayDateKey
-  );
 
   function openTransactionModal(
     type: TransactionType
@@ -464,9 +396,7 @@ const todayAlreadyArchived =
 
   function closeTransactionModal() {
     if (!saving) {
-      setTransactionModalOpen(
-        false
-      );
+      setTransactionModalOpen(false);
     }
   }
 
@@ -485,9 +415,7 @@ const todayAlreadyArchived =
         createdAt: Date.now(),
       });
 
-      setTransactionModalOpen(
-        false
-      );
+      setTransactionModalOpen(false);
     } catch (error) {
       console.error(
         "İşlem kaydetme hatası:",
@@ -507,24 +435,16 @@ const todayAlreadyArchived =
   function openEditModal(
     transaction: Transaction
   ) {
-    setSelectedTransaction(
-      transaction
-    );
-
+    setSelectedTransaction(transaction);
     setEditModalOpen(true);
     setSyncError("");
   }
 
   function closeEditModal() {
-    if (editing) {
-      return;
-    }
+    if (editing) return;
 
     setEditModalOpen(false);
-
-    setSelectedTransaction(
-      null
-    );
+    setSelectedTransaction(null);
   }
 
   async function saveEditedTransaction(
@@ -537,20 +457,14 @@ const todayAlreadyArchived =
       setEditing(true);
       setSyncError("");
 
-      await updateTransaction(
-        id,
-        {
-          type,
-          amount,
-          description,
-        }
-      );
+      await updateTransaction(id, {
+        type,
+        amount,
+        description,
+      });
 
       setEditModalOpen(false);
-
-      setSelectedTransaction(
-        null
-      );
+      setSelectedTransaction(null);
     } catch (error) {
       console.error(
         "İşlem düzenleme hatası:",
@@ -570,10 +484,7 @@ const todayAlreadyArchived =
   function requestDeleteTransaction(
     transaction: Transaction
   ) {
-    setDeleteCandidate(
-      transaction
-    );
-
+    setDeleteCandidate(transaction);
     setSyncError("");
   }
 
@@ -585,12 +496,7 @@ const todayAlreadyArchived =
 
   async function confirmDeleteTransaction():
     Promise<void> {
-    if (
-      !deleteCandidate ||
-      deleting
-    ) {
-      return;
-    }
+    if (!deleteCandidate || deleting) return;
 
     try {
       setDeleting(true);
@@ -618,8 +524,7 @@ const todayAlreadyArchived =
   }
 
   async function handleSaveQuickDescriptions(
-    descriptions:
-      QuickDescription[]
+    descriptions: QuickDescription[]
   ): Promise<void> {
     try {
       setSettingsSaving(true);
@@ -644,13 +549,62 @@ const todayAlreadyArchived =
     }
   }
 
+  async function handleSaveOpeningBalance(
+    amount: number
+  ): Promise<void> {
+    try {
+      setSettingsSaving(true);
+      setSyncError("");
+
+      await saveOpeningBalance(amount);
+    } catch (error) {
+      console.error(
+        "Başlangıç kasası kaydetme hatası:",
+        error
+      );
+
+      setSyncError(
+        error instanceof Error
+          ? `Başlangıç kasası kaydedilemedi: ${error.message}`
+          : "Başlangıç kasası kaydedilemedi."
+      );
+    } finally {
+      setSettingsSaving(false);
+    }
+  }
+
+  async function handleArchiveDayEnd():
+    Promise<void> {
+    try {
+      setArchivingDayEnd(true);
+      setSyncError("");
+
+      await saveDayEnd({
+        transactions:
+          todayTransactions,
+        balance,
+      });
+    } catch (error) {
+      console.error(
+        "Gün sonu kaydetme hatası:",
+        error
+      );
+
+      setSyncError(
+        error instanceof Error
+          ? `Gün sonu kaydedilemedi: ${error.message}`
+          : "Gün sonu kaydedilemedi."
+      );
+    } finally {
+      setArchivingDayEnd(false);
+    }
+  }
+
   function renderPage() {
     if (activePage === "home") {
       return (
         <HomePage
-          transactions={
-            transactions
-          }
+          transactions={transactions}
           loading={loading}
           saving={
             saving ||
@@ -664,24 +618,16 @@ const todayAlreadyArchived =
           }
           lastUpdate={lastUpdate}
           onAddIncome={() =>
-            openTransactionModal(
-              "income"
-            )
+            openTransactionModal("income")
           }
           onAddExpense={() =>
-            openTransactionModal(
-              "expense"
-            )
+            openTransactionModal("expense")
           }
           onShowAllTransactions={() =>
-            setActivePage(
-              "transactions"
-            )
+            setActivePage("transactions")
           }
           onDayEnd={() =>
-            setDayEndModalOpen(
-              true
-            )
+            setDayEndModalOpen(true)
           }
           onEditTransaction={
             openEditModal
@@ -693,15 +639,10 @@ const todayAlreadyArchived =
       );
     }
 
-    if (
-      activePage ===
-      "transactions"
-    ) {
+    if (activePage === "transactions") {
       return (
         <TransactionsPage
-          transactions={
-            transactions
-          }
+          transactions={transactions}
           loading={loading}
           onEditTransaction={
             openEditModal
@@ -713,14 +654,12 @@ const todayAlreadyArchived =
       );
     }
 
-    if (
-      activePage === "reports"
-    ) {
+    if (activePage === "reports") {
       return (
         <ReportsPage
-  transactions={transactions}
-  dayEnds={dayEnds}
-/>
+          transactions={transactions}
+          dayEnds={dayEnds}
+        />
       );
     }
 
@@ -729,14 +668,16 @@ const todayAlreadyArchived =
         quickDescriptions={
           quickDescriptions
         }
-        loading={
-          settingsLoading
+        openingBalance={
+          openingBalance
         }
-        saving={
-          settingsSaving
-        }
+        loading={settingsLoading}
+        saving={settingsSaving}
         onSaveQuickDescriptions={
           handleSaveQuickDescriptions
+        }
+        onSaveOpeningBalance={
+          handleSaveOpeningBalance
         }
       />
     );
@@ -754,9 +695,7 @@ const todayAlreadyArchived =
       />
 
       <AddTransactionModal
-        open={
-          transactionModalOpen
-        }
+        open={transactionModalOpen}
         type={transactionType}
         quickDescriptions={
           quickDescriptions
@@ -773,9 +712,7 @@ const todayAlreadyArchived =
           selectedTransaction
         }
         saving={editing}
-        onClose={
-          closeEditModal
-        }
+        onClose={closeEditModal}
         onSave={
           saveEditedTransaction
         }
@@ -783,34 +720,37 @@ const todayAlreadyArchived =
 
       <DeleteTransactionModal
         open={
-          deleteCandidate !==
-          null
+          deleteCandidate !== null
         }
         transaction={
           deleteCandidate
         }
         deleting={deleting}
-        onClose={
-          closeDeleteModal
-        }
+        onClose={closeDeleteModal}
         onConfirm={
           confirmDeleteTransaction
         }
       />
 
       <DayEndModal
-  open={dayEndModalOpen}
-  transactions={todayTransactions}
-  balance={balance}
-  alreadyArchived={
-    todayAlreadyArchived
-  }
-  archiving={archivingDayEnd}
-  onArchive={handleArchiveDayEnd}
-  onClose={() =>
-    setDayEndModalOpen(false)
-  }
-/>
+        open={dayEndModalOpen}
+        transactions={
+          todayTransactions
+        }
+        balance={balance}
+        alreadyArchived={
+          todayAlreadyArchived
+        }
+        archiving={
+          archivingDayEnd
+        }
+        onArchive={
+          handleArchiveDayEnd
+        }
+        onClose={() =>
+          setDayEndModalOpen(false)
+        }
+      />
     </>
   );
 }
