@@ -35,7 +35,10 @@ button {
   max-width: 520px;
   min-height: 100vh;
   margin: 0 auto;
-  padding: 28px 18px 44px;
+  padding:
+  calc(28px + env(safe-area-inset-top))
+  18px
+  calc(105px + env(safe-area-inset-bottom));
 }
 
 .sync-status {
@@ -162,9 +165,6 @@ button {
   gap: 9px;
   cursor: pointer;
   box-shadow: var(--shadow);
-}
-.app {
-  padding-bottom: calc(105px + env(safe-area-inset-bottom));
 }
 
 .section-heading {
