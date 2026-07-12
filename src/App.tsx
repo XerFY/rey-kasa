@@ -5,7 +5,14 @@ import {
 } from "react";
 
 import "./App.css";
+import {
+  listenDayEnds,
+  saveDayEnd,
+} from "./services/dayEndService";
 
+import type {
+  DayEndRecord,
+} from "./types/DayEndRecord";
 import AddTransactionModal from "./components/AddTransactionModal";
 import BottomNavigation, {
   type AppPage,
@@ -65,6 +72,33 @@ function App() {
     transactions,
     setTransactions,
   ] = useState<Transaction[]>([]);
+
+  async function handleArchiveDayEnd():
+  Promise<void> {
+  try {
+    setArchivingDayEnd(true);
+    setSyncError("");
+
+    await saveDayEnd({
+      transactions:
+        todayTransactions,
+      balance,
+    });
+  } catch (error) {
+    console.error(
+      "Gün sonu kaydetme hatası:",
+      error
+    );
+
+    setSyncError(
+      error instanceof Error
+        ? `Gün sonu kaydedilemedi: ${error.message}`
+        : "Gün sonu kaydedilemedi."
+    );
+  } finally {
+    setArchivingDayEnd(false);
+  }
+}
 
   const [
     activePage,
@@ -130,6 +164,12 @@ function App() {
     settingsLoading,
     setSettingsLoading,
   ] = useState(true);
+
+  const [dayEnds, setDayEnds] =
+  useState<DayEndRecord[]>([]);
+
+const [archivingDayEnd, setArchivingDayEnd] =
+  useState(false);
 
   const [
     settingsSaving,
@@ -219,6 +259,60 @@ function App() {
       unsubscribe?.();
     };
   }, []);
+
+  useEffect(() => {
+  let unsubscribe:
+    | (() => void)
+    | undefined;
+
+  let mounted = true;
+
+  async function startDayEnds() {
+    try {
+      await connectFirebase();
+
+      if (!mounted) {
+        return;
+      }
+
+      unsubscribe = listenDayEnds(
+        (records) => {
+          if (!mounted) {
+            return;
+          }
+
+          setDayEnds(records);
+        },
+        (error) => {
+          if (!mounted) {
+            return;
+          }
+
+          console.error(
+            "Gün sonu arşiv hatası:",
+            error
+          );
+
+          setSyncError(
+            `Gün sonları yüklenemedi: ${error.message}`
+          );
+        }
+      );
+    } catch (error) {
+      console.error(
+        "Gün sonu bağlantı hatası:",
+        error
+      );
+    }
+  }
+
+  void startDayEnds();
+
+  return () => {
+    mounted = false;
+    unsubscribe?.();
+  };
+}, []);
 
   useEffect(() => {
     let unsubscribe:
@@ -343,6 +437,22 @@ function App() {
           }
         )
       : "Henüz işlem yok";
+
+        const todayDateKey = [
+  new Date().getFullYear(),
+  String(
+    new Date().getMonth() + 1
+  ).padStart(2, "0"),
+  String(
+    new Date().getDate()
+  ).padStart(2, "0"),
+].join("-");
+
+const todayAlreadyArchived =
+  dayEnds.some(
+    (record) =>
+      record.dateKey === todayDateKey
+  );
 
   function openTransactionModal(
     type: TransactionType
@@ -690,17 +800,18 @@ function App() {
       />
 
       <DayEndModal
-        open={dayEndModalOpen}
-        transactions={
-          todayTransactions
-        }
-        balance={balance}
-        onClose={() =>
-          setDayEndModalOpen(
-            false
-          )
-        }
-      />
+  open={dayEndModalOpen}
+  transactions={todayTransactions}
+  balance={balance}
+  alreadyArchived={
+    todayAlreadyArchived
+  }
+  archiving={archivingDayEnd}
+  onArchive={handleArchiveDayEnd}
+  onClose={() =>
+    setDayEndModalOpen(false)
+  }
+/>
     </>
   );
 }
