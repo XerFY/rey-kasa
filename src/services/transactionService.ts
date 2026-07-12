@@ -2,9 +2,12 @@ import { signInAnonymously } from "firebase/auth";
 import {
   addDoc,
   collection,
+  deleteDoc,
+  doc,
   onSnapshot,
   orderBy,
   query,
+  updateDoc,
   type Unsubscribe,
 } from "firebase/firestore";
 
@@ -13,10 +16,14 @@ import type { Transaction } from "../types/Transaction";
 
 const transactionsCollection = collection(db, "transactions");
 
-export async function connectFirebase(): Promise<void> {
+async function ensureAuthenticated(): Promise<void> {
   if (!auth.currentUser) {
     await signInAnonymously(auth);
   }
+}
+
+export async function connectFirebase(): Promise<void> {
+  await ensureAuthenticated();
 }
 
 export function listenTransactions(
@@ -31,25 +38,49 @@ export function listenTransactions(
   return onSnapshot(
     transactionsQuery,
     (snapshot) => {
-      const transactions: Transaction[] = snapshot.docs.map((document) => {
-        const data = document.data() as Omit<Transaction, "id">;
+      const transactions = snapshot.docs.map((document) => {
+        const data = document.data();
 
         return {
           id: document.id,
-          ...data,
-        };
+          type: data.type,
+          amount: data.amount,
+          description: data.description,
+          createdAt: data.createdAt,
+        } as Transaction;
       });
 
       onData(transactions);
     },
-    (error) => {
-      onError(error);
-    }
+    onError
   );
 }
 
 export async function createTransaction(
   transaction: Omit<Transaction, "id">
 ): Promise<void> {
+  await ensureAuthenticated();
   await addDoc(transactionsCollection, transaction);
+}
+
+export async function updateTransaction(
+  id: string,
+  changes: Pick<Transaction, "type" | "amount" | "description">
+): Promise<void> {
+  await ensureAuthenticated();
+
+  const transactionDocument = doc(db, "transactions", id);
+
+  await updateDoc(transactionDocument, {
+    type: changes.type,
+    amount: changes.amount,
+    description: changes.description,
+  });
+}
+
+export async function deleteTransaction(id: string): Promise<void> {
+  await ensureAuthenticated();
+
+  const transactionDocument = doc(db, "transactions", id);
+  await deleteDoc(transactionDocument);
 }

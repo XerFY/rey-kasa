@@ -7,6 +7,7 @@ import BottomNavigation, {
   type AppPage,
 } from "./components/BottomNavigation";
 import DayEndModal from "./components/DayEndModal";
+import EditTransactionModal from "./components/EditTransactionModal";
 
 import HomePage from "./pages/HomePage";
 import ReportsPage from "./pages/ReportsPage";
@@ -16,7 +17,9 @@ import TransactionsPage from "./pages/TransactionsPage";
 import {
   connectFirebase,
   createTransaction,
+  deleteTransaction,
   listenTransactions,
+  updateTransaction,
 } from "./services/transactionService";
 
 import type { Transaction } from "./types/Transaction";
@@ -37,14 +40,23 @@ function App() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [activePage, setActivePage] = useState<AppPage>("home");
 
-  const [transactionModalOpen, setTransactionModalOpen] = useState(false);
+  const [transactionModalOpen, setTransactionModalOpen] =
+    useState(false);
+
   const [dayEndModalOpen, setDayEndModalOpen] = useState(false);
+
+  const [editModalOpen, setEditModalOpen] = useState(false);
+
+  const [selectedTransaction, setSelectedTransaction] =
+    useState<Transaction | null>(null);
 
   const [transactionType, setTransactionType] =
     useState<TransactionType>("income");
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [syncError, setSyncError] = useState("");
 
   useEffect(() => {
@@ -116,12 +128,15 @@ function App() {
 
   const lastUpdate =
     transactions.length > 0
-      ? new Date(transactions[0].createdAt).toLocaleString("tr-TR", {
-          day: "2-digit",
-          month: "2-digit",
-          hour: "2-digit",
-          minute: "2-digit",
-        })
+      ? new Date(transactions[0].createdAt).toLocaleString(
+          "tr-TR",
+          {
+            day: "2-digit",
+            month: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+          }
+        )
       : "Henüz işlem yok";
 
   function openTransactionModal(type: TransactionType) {
@@ -165,21 +180,105 @@ function App() {
     }
   }
 
+  function openEditModal(transaction: Transaction) {
+    setSelectedTransaction(transaction);
+    setEditModalOpen(true);
+    setSyncError("");
+  }
+
+  function closeEditModal() {
+    if (editing) return;
+
+    setEditModalOpen(false);
+    setSelectedTransaction(null);
+  }
+
+  async function saveEditedTransaction(
+    id: string,
+    type: TransactionType,
+    amount: number,
+    description: string
+  ): Promise<void> {
+    try {
+      setEditing(true);
+      setSyncError("");
+
+      await updateTransaction(id, {
+        type,
+        amount,
+        description,
+      });
+
+      setEditModalOpen(false);
+      setSelectedTransaction(null);
+    } catch (error) {
+      console.error("İşlem düzenleme hatası:", error);
+
+      setSyncError(
+        error instanceof Error
+          ? `İşlem düzenlenemedi: ${error.message}`
+          : "İşlem düzenlenemedi."
+      );
+    } finally {
+      setEditing(false);
+    }
+  }
+
+  async function handleDeleteTransaction(
+    transaction: Transaction
+  ): Promise<void> {
+    if (deletingId) return;
+
+    const amount = transaction.amount.toLocaleString("tr-TR", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+
+    const confirmed = window.confirm(
+      `${transaction.description}\n₺${amount}\n\nBu işlem kalıcı olarak silinsin mi?`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setDeletingId(transaction.id);
+      setSyncError("");
+
+      await deleteTransaction(transaction.id);
+    } catch (error) {
+      console.error("İşlem silme hatası:", error);
+
+      setSyncError(
+        error instanceof Error
+          ? `İşlem silinemedi: ${error.message}`
+          : "İşlem silinemedi."
+      );
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
   function renderPage() {
     if (activePage === "home") {
       return (
         <HomePage
           transactions={transactions}
           loading={loading}
-          saving={saving}
+          saving={saving || deletingId !== null}
           syncError={syncError}
           balance={balance}
           todayTransactionCount={todayTransactions.length}
           lastUpdate={lastUpdate}
           onAddIncome={() => openTransactionModal("income")}
           onAddExpense={() => openTransactionModal("expense")}
-          onShowAllTransactions={() => setActivePage("transactions")}
+          onShowAllTransactions={() =>
+            setActivePage("transactions")
+          }
           onDayEnd={() => setDayEndModalOpen(true)}
+          onEditTransaction={openEditModal}
+          onDeleteTransaction={(transaction) => {
+            void handleDeleteTransaction(transaction);
+          }}
         />
       );
     }
@@ -189,6 +288,10 @@ function App() {
         <TransactionsPage
           transactions={transactions}
           loading={loading}
+          onEditTransaction={openEditModal}
+          onDeleteTransaction={(transaction) => {
+            void handleDeleteTransaction(transaction);
+          }}
         />
       );
     }
@@ -214,6 +317,14 @@ function App() {
         type={transactionType}
         onClose={closeTransactionModal}
         onSave={saveTransaction}
+      />
+
+      <EditTransactionModal
+        open={editModalOpen}
+        transaction={selectedTransaction}
+        saving={editing}
+        onClose={closeEditModal}
+        onSave={saveEditedTransaction}
       />
 
       <DayEndModal

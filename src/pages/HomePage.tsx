@@ -18,6 +18,8 @@ type Props = {
   onAddExpense: () => void;
   onShowAllTransactions: () => void;
   onDayEnd: () => void;
+  onEditTransaction: (transaction: Transaction) => void;
+  onDeleteTransaction: (transaction: Transaction) => void;
 };
 
 function HomePage({
@@ -32,6 +34,8 @@ function HomePage({
   onAddExpense,
   onShowAllTransactions,
   onDayEnd,
+  onEditTransaction,
+  onDeleteTransaction,
 }: Props) {
   const recentTransactions = transactions.slice(0, 5);
 
@@ -93,10 +97,16 @@ function HomePage({
         <TransactionList
           transactions={recentTransactions}
           loading={loading}
+          onEdit={onEditTransaction}
+          onDelete={onDeleteTransaction}
         />
       </section>
 
-      <button type="button" className="day-end" onClick={onDayEnd}>
+      <button
+        type="button"
+        className="day-end"
+        onClick={onDayEnd}
+      >
         <Receipt size={21} />
         Gün Sonu
       </button>
