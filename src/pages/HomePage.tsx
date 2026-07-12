@@ -8,7 +8,7 @@ import {
 import BalanceCard from "../components/BalanceCard";
 import Header from "../components/Header";
 import TransactionList from "../components/TransactionList";
-
+import ConnectionStatus from "../components/ConnectionStatus";
 import type { Transaction } from "../types/Transaction";
 
 type Props = {
@@ -59,19 +59,10 @@ function HomePage({
     <>
       <Header />
 
-      <div
-        className={`sync-status ${
-          syncError
-            ? "sync-error"
-            : ""
-        }`}
-      >
-        {syncError
-          ? syncError
-          : loading
-            ? "Buluta bağlanıyor..."
-            : "● Bulut senkronize"}
-      </div>
+      <ConnectionStatus
+  loading={loading}
+  syncError={syncError}
+/>
 
       <BalanceCard
         balance={balance}
