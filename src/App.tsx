@@ -1,4 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
 import "./App.css";
 
@@ -16,6 +20,11 @@ import SettingsPage from "./pages/SettingsPage";
 import TransactionsPage from "./pages/TransactionsPage";
 
 import {
+  listenSettings,
+  saveQuickDescriptions,
+} from "./services/settingsService";
+
+import {
   connectFirebase,
   createTransaction,
   deleteTransaction,
@@ -27,7 +36,10 @@ import type { Transaction } from "./types/Transaction";
 
 type TransactionType = "income" | "expense";
 
-function isSameDay(timestamp: number, targetDate: Date): boolean {
+function isSameDay(
+  timestamp: number,
+  targetDate: Date
+): boolean {
   const date = new Date(timestamp);
 
   return (
@@ -38,35 +50,77 @@ function isSameDay(timestamp: number, targetDate: Date): boolean {
 }
 
 function App() {
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [activePage, setActivePage] = useState<AppPage>("home");
+  const [transactions, setTransactions] =
+    useState<Transaction[]>([]);
 
-  const [transactionModalOpen, setTransactionModalOpen] =
+  const [activePage, setActivePage] =
+    useState<AppPage>("home");
+
+  const [
+    transactionModalOpen,
+    setTransactionModalOpen,
+  ] = useState(false);
+
+  const [
+    dayEndModalOpen,
+    setDayEndModalOpen,
+  ] = useState(false);
+
+  const [
+    editModalOpen,
+    setEditModalOpen,
+  ] = useState(false);
+
+  const [
+    selectedTransaction,
+    setSelectedTransaction,
+  ] = useState<Transaction | null>(null);
+
+  const [
+    deleteCandidate,
+    setDeleteCandidate,
+  ] = useState<Transaction | null>(null);
+
+  const [
+    transactionType,
+    setTransactionType,
+  ] = useState<TransactionType>("income");
+
+  const [
+    quickDescriptions,
+    setQuickDescriptions,
+  ] = useState<string[]>([]);
+
+  const [loading, setLoading] =
+    useState(true);
+
+  const [saving, setSaving] =
     useState(false);
 
-  const [dayEndModalOpen, setDayEndModalOpen] =
+  const [editing, setEditing] =
     useState(false);
 
-  const [editModalOpen, setEditModalOpen] =
+  const [deleting, setDeleting] =
     useState(false);
 
-  const [selectedTransaction, setSelectedTransaction] =
-    useState<Transaction | null>(null);
+  const [
+    settingsLoading,
+    setSettingsLoading,
+  ] = useState(true);
 
-  const [deleteCandidate, setDeleteCandidate] =
-    useState<Transaction | null>(null);
+  const [
+    settingsSaving,
+    setSettingsSaving,
+  ] = useState(false);
 
-  const [transactionType, setTransactionType] =
-    useState<TransactionType>("income");
-
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [editing, setEditing] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-  const [syncError, setSyncError] = useState("");
+  const [syncError, setSyncError] =
+    useState("");
 
   useEffect(() => {
-    let unsubscribe: (() => void) | undefined;
+    let unsubscribe:
+      | (() => void)
+      | undefined;
+
     let mounted = true;
 
     async function startFirebase() {
@@ -86,7 +140,10 @@ function App() {
               return;
             }
 
-            setTransactions(firebaseTransactions);
+            setTransactions(
+              firebaseTransactions
+            );
+
             setLoading(false);
             setSyncError("");
           },
@@ -135,6 +192,80 @@ function App() {
     };
   }, []);
 
+  useEffect(() => {
+    let unsubscribe:
+      | (() => void)
+      | undefined;
+
+    let mounted = true;
+
+    async function startSettings() {
+      try {
+        setSettingsLoading(true);
+
+        await connectFirebase();
+
+        if (!mounted) {
+          return;
+        }
+
+        unsubscribe = listenSettings(
+          (settings) => {
+            if (!mounted) {
+              return;
+            }
+
+            setQuickDescriptions(
+              settings.quickDescriptions
+            );
+
+            setSettingsLoading(false);
+          },
+          (error) => {
+            if (!mounted) {
+              return;
+            }
+
+            console.error(
+              "Ayarları okuma hatası:",
+              error
+            );
+
+            setSettingsLoading(false);
+
+            setSyncError(
+              `Ayarlar yüklenemedi: ${error.message}`
+            );
+          }
+        );
+      } catch (error) {
+        if (!mounted) {
+          return;
+        }
+
+        console.error(
+          "Ayar bağlantı hatası:",
+          error
+        );
+
+        setSettingsLoading(false);
+
+        setSyncError(
+          error instanceof Error
+            ? `Ayarlar yüklenemedi: ${error.message}`
+            : "Ayarlar yüklenemedi."
+        );
+      }
+    }
+
+    void startSettings();
+
+    return () => {
+      mounted = false;
+      unsubscribe?.();
+    };
+  }, []);
+
   const balance = useMemo(() => {
     return transactions.reduce(
       (total, transaction) => {
@@ -146,13 +277,18 @@ function App() {
     );
   }, [transactions]);
 
-  const todayTransactions = useMemo(() => {
-    const today = new Date();
+  const todayTransactions =
+    useMemo(() => {
+      const today = new Date();
 
-    return transactions.filter((transaction) =>
-      isSameDay(transaction.createdAt, today)
-    );
-  }, [transactions]);
+      return transactions.filter(
+        (transaction) =>
+          isSameDay(
+            transaction.createdAt,
+            today
+          )
+      );
+    }, [transactions]);
 
   const lastUpdate =
     transactions.length > 0
@@ -307,6 +443,32 @@ function App() {
     }
   }
 
+  async function handleSaveQuickDescriptions(
+    descriptions: string[]
+  ): Promise<void> {
+    try {
+      setSettingsSaving(true);
+      setSyncError("");
+
+      await saveQuickDescriptions(
+        descriptions
+      );
+    } catch (error) {
+      console.error(
+        "Hazır açıklama kaydetme hatası:",
+        error
+      );
+
+      setSyncError(
+        error instanceof Error
+          ? `Ayar kaydedilemedi: ${error.message}`
+          : "Ayar kaydedilemedi."
+      );
+    } finally {
+      setSettingsSaving(false);
+    }
+  }
+
   function renderPage() {
     if (activePage === "home") {
       return (
@@ -365,7 +527,18 @@ function App() {
       return <ReportsPage />;
     }
 
-    return <SettingsPage />;
+    return (
+      <SettingsPage
+        quickDescriptions={
+          quickDescriptions
+        }
+        loading={settingsLoading}
+        saving={settingsSaving}
+        onSaveQuickDescriptions={
+          handleSaveQuickDescriptions
+        }
+      />
+    );
   }
 
   return (
@@ -399,7 +572,9 @@ function App() {
         transaction={deleteCandidate}
         deleting={deleting}
         onClose={closeDeleteModal}
-        onConfirm={confirmDeleteTransaction}
+        onConfirm={
+          confirmDeleteTransaction
+        }
       />
 
       <DayEndModal
