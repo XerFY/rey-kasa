@@ -1,0 +1,232 @@
+.delete-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1400;
+
+  padding: 20px;
+
+  background: rgba(15, 23, 42, 0.58);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+
+  animation: delete-overlay-in 0.18s ease;
+}
+
+.delete-modal {
+  position: relative;
+
+  width: 100%;
+  max-width: 390px;
+
+  padding: 28px 22px 22px;
+
+  border: 1px solid var(--border);
+  border-radius: 26px;
+
+  background: var(--surface);
+  color: var(--text);
+
+  text-align: center;
+
+  box-shadow:
+    0 24px 70px rgba(15, 23, 42, 0.22),
+    0 0 0 1px rgba(220, 38, 38, 0.04);
+
+  animation: delete-modal-in 0.2s ease;
+}
+
+.delete-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+
+  width: 40px;
+  height: 40px;
+
+  border: 1px solid var(--border);
+  border-radius: 13px;
+
+  background: var(--surface-soft);
+  color: var(--text-secondary);
+
+  display: grid;
+  place-items: center;
+
+  cursor: pointer;
+}
+
+.delete-icon {
+  width: 68px;
+  height: 68px;
+
+  margin: 0 auto 17px;
+
+  border-radius: 22px;
+
+  background: color-mix(
+    in srgb,
+    var(--danger) 12%,
+    var(--surface)
+  );
+
+  color: var(--danger);
+
+  display: grid;
+  place-items: center;
+}
+
+.delete-modal h2 {
+  color: var(--text);
+  font-size: 23px;
+  font-weight: 850;
+}
+
+.delete-warning {
+  max-width: 300px;
+
+  margin: 9px auto 20px;
+
+  color: var(--text-secondary);
+
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.delete-transaction-preview {
+  padding: 15px;
+
+  border: 1px solid var(--border);
+  border-radius: 17px;
+
+  background: var(--surface-soft);
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+
+  text-align: left;
+}
+
+.delete-transaction-preview div {
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.delete-transaction-preview span {
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.delete-transaction-preview strong {
+  overflow: hidden;
+
+  color: var(--text);
+
+  font-size: 14px;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.delete-transaction-preview b {
+  flex-shrink: 0;
+
+  font-size: 15px;
+  white-space: nowrap;
+}
+
+.delete-income {
+  color: var(--success);
+}
+
+.delete-expense {
+  color: var(--danger);
+}
+
+.delete-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+
+  margin-top: 20px;
+}
+
+.delete-actions button {
+  min-height: 54px;
+
+  border-radius: 17px;
+
+  font-size: 15px;
+  font-weight: 800;
+
+  cursor: pointer;
+}
+
+.delete-cancel {
+  border: 1px solid var(--border);
+
+  background: var(--surface-soft);
+  color: var(--text-secondary);
+}
+
+.delete-confirm {
+  border: 1px solid var(--danger);
+
+  background: var(--danger);
+  color: #ffffff;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  box-shadow: 0 10px 24px
+    color-mix(in srgb, var(--danger) 24%, transparent);
+}
+
+.delete-actions button:disabled,
+.delete-close:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+@keyframes delete-overlay-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes delete-modal-in {
+  from {
+    opacity: 0;
+    transform: scale(0.92) translateY(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@media (max-width: 380px) {
+  .delete-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .delete-cancel {
+    order: 2;
+  }
+}
