@@ -10,7 +10,7 @@ import {
 } from "react";
 
 import "../styles/ReportsPage.css";
-
+import ReportExportActions from "../components/ReportExportActions";
 import DayEndHistory from "../components/DayEndHistory";
 
 import type {
@@ -214,6 +214,10 @@ function ReportsPage({
       </div>
 
       <div className="report-summary-grid">
+        <ReportExportActions
+  transactions={reportTransactions}
+  title={periodTitle}
+/>
         <article className="report-card report-income">
           <div className="report-card-icon">
             <ArrowUpRight
