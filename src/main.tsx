@@ -24,6 +24,8 @@ createRoot(rootElement).render(
 
 registerPWA();
 
+const minimumSplashDuration = 700;
+
 function hideSplashScreen() {
   const splash =
     document.getElementById(
@@ -34,17 +36,15 @@ function hideSplashScreen() {
     return;
   }
 
-  window.requestAnimationFrame(() => {
-    window.requestAnimationFrame(() => {
-      splash.classList.add(
-        "splash-hidden"
-      );
+  window.setTimeout(() => {
+    splash.classList.add(
+      "splash-hidden"
+    );
 
-      window.setTimeout(() => {
-        splash.remove();
-      }, 250);
-    });
-  });
+    window.setTimeout(() => {
+      splash.remove();
+    }, 250);
+  }, minimumSplashDuration);
 }
 
 if (
