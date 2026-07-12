@@ -267,3 +267,34 @@ button {
 .transaction-menu .transaction-delete-option {
   color: var(--danger);
 }
+.cash-adjust-button {
+  width: 100%;
+  min-height: 52px;
+
+  margin: -17px 0 28px;
+
+  border: 1px solid var(--primary);
+  border-radius: 16px;
+
+  background: var(--primary-soft);
+  color: var(--primary);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  font-size: 14px;
+  font-weight: 800;
+
+  cursor: pointer;
+}
+
+.cash-adjust-button:active {
+  transform: scale(0.98);
+}
+
+.cash-adjust-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}

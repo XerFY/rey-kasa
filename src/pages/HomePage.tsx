@@ -1,4 +1,9 @@
-import { Minus, Plus, Receipt } from "lucide-react";
+import {
+  Minus,
+  Plus,
+  Receipt,
+  Scale,
+} from "lucide-react";
 
 import BalanceCard from "../components/BalanceCard";
 import Header from "../components/Header";
@@ -11,15 +16,24 @@ type Props = {
   loading: boolean;
   saving: boolean;
   syncError: string;
+
   balance: number;
   todayTransactionCount: number;
   lastUpdate: string;
+
   onAddIncome: () => void;
   onAddExpense: () => void;
+  onAdjustBalance: () => void;
   onShowAllTransactions: () => void;
   onDayEnd: () => void;
-  onEditTransaction: (transaction: Transaction) => void;
-  onDeleteTransaction: (transaction: Transaction) => void;
+
+  onEditTransaction: (
+    transaction: Transaction
+  ) => void;
+
+  onDeleteTransaction: (
+    transaction: Transaction
+  ) => void;
 };
 
 function HomePage({
@@ -32,18 +46,26 @@ function HomePage({
   lastUpdate,
   onAddIncome,
   onAddExpense,
+  onAdjustBalance,
   onShowAllTransactions,
   onDayEnd,
   onEditTransaction,
   onDeleteTransaction,
 }: Props) {
-  const recentTransactions = transactions.slice(0, 5);
+  const recentTransactions =
+    transactions.slice(0, 5);
 
   return (
     <>
       <Header />
 
-      <div className={`sync-status ${syncError ? "sync-error" : ""}`}>
+      <div
+        className={`sync-status ${
+          syncError
+            ? "sync-error"
+            : ""
+        }`}
+      >
         {syncError
           ? syncError
           : loading
@@ -53,7 +75,9 @@ function HomePage({
 
       <BalanceCard
         balance={balance}
-        transactionCount={todayTransactionCount}
+        transactionCount={
+          todayTransactionCount
+        }
         lastUpdate={lastUpdate}
       />
 
@@ -79,6 +103,16 @@ function HomePage({
         </button>
       </div>
 
+      <button
+        type="button"
+        className="cash-adjust-button"
+        onClick={onAdjustBalance}
+        disabled={saving}
+      >
+        <Scale size={20} />
+        Kasa Düzelt
+      </button>
+
       <section className="transactions">
         <div className="section-heading">
           <h3>Son İşlemler</h3>
@@ -87,7 +121,9 @@ function HomePage({
             <button
               type="button"
               className="text-button"
-              onClick={onShowAllTransactions}
+              onClick={
+                onShowAllTransactions
+              }
             >
               Tümünü Gör
             </button>
@@ -95,10 +131,16 @@ function HomePage({
         </div>
 
         <TransactionList
-          transactions={recentTransactions}
+          transactions={
+            recentTransactions
+          }
           loading={loading}
-          onEdit={onEditTransaction}
-          onDelete={onDeleteTransaction}
+          onEdit={
+            onEditTransaction
+          }
+          onDelete={
+            onDeleteTransaction
+          }
         />
       </section>
 

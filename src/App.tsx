@@ -10,6 +10,7 @@ import AddTransactionModal from "./components/AddTransactionModal";
 import BottomNavigation, {
   type AppPage,
 } from "./components/BottomNavigation";
+import CashAdjustmentModal from "./components/CashAdjustmentModal";
 import DayEndModal from "./components/DayEndModal";
 import DeleteTransactionModal from "./components/DeleteTransactionModal";
 import EditTransactionModal from "./components/EditTransactionModal";
@@ -38,15 +39,9 @@ import {
   updateTransaction,
 } from "./services/transactionService";
 
-import type {
-  QuickDescription,
-} from "./types/AppSettings";
-import type {
-  DayEndRecord,
-} from "./types/DayEndRecord";
-import type {
-  Transaction,
-} from "./types/Transaction";
+import type { QuickDescription } from "./types/AppSettings";
+import type { DayEndRecord } from "./types/DayEndRecord";
+import type { Transaction } from "./types/Transaction";
 
 type TransactionType =
   | "income"
@@ -59,13 +54,18 @@ function isSameDay(
   const date = new Date(timestamp);
 
   return (
-    date.getDate() === targetDate.getDate() &&
-    date.getMonth() === targetDate.getMonth() &&
-    date.getFullYear() === targetDate.getFullYear()
+    date.getDate() ===
+      targetDate.getDate() &&
+    date.getMonth() ===
+      targetDate.getMonth() &&
+    date.getFullYear() ===
+      targetDate.getFullYear()
   );
 }
 
-function createDateKey(date: Date): string {
+function createDateKey(
+  date: Date
+): string {
   const year = date.getFullYear();
 
   const month = String(
@@ -80,8 +80,10 @@ function createDateKey(date: Date): string {
 }
 
 function App() {
-  const [transactions, setTransactions] =
-    useState<Transaction[]>([]);
+  const [
+    transactions,
+    setTransactions,
+  ] = useState<Transaction[]>([]);
 
   const [dayEnds, setDayEnds] =
     useState<DayEndRecord[]>([]);
@@ -95,35 +97,52 @@ function App() {
   ] = useState(false);
 
   const [
+    adjustmentModalOpen,
+    setAdjustmentModalOpen,
+  ] = useState(false);
+
+  const [
     dayEndModalOpen,
     setDayEndModalOpen,
   ] = useState(false);
 
-  const [editModalOpen, setEditModalOpen] =
-    useState(false);
+  const [
+    editModalOpen,
+    setEditModalOpen,
+  ] = useState(false);
 
   const [
     selectedTransaction,
     setSelectedTransaction,
-  ] = useState<Transaction | null>(null);
+  ] = useState<Transaction | null>(
+    null
+  );
 
   const [
     deleteCandidate,
     setDeleteCandidate,
-  ] = useState<Transaction | null>(null);
+  ] = useState<Transaction | null>(
+    null
+  );
 
   const [
     transactionType,
     setTransactionType,
-  ] = useState<TransactionType>("income");
+  ] = useState<TransactionType>(
+    "income"
+  );
 
   const [
     quickDescriptions,
     setQuickDescriptions,
-  ] = useState<QuickDescription[]>([]);
+  ] = useState<
+    QuickDescription[]
+  >([]);
 
-  const [openingBalance, setOpeningBalance] =
-    useState(0);
+  const [
+    openingBalance,
+    setOpeningBalance,
+  ] = useState(0);
 
   const [loading, setLoading] =
     useState(true);
@@ -152,8 +171,10 @@ function App() {
     setArchivingDayEnd,
   ] = useState(false);
 
-  const [syncError, setSyncError] =
-    useState("");
+  const [
+    syncError,
+    setSyncError,
+  ] = useState("");
 
   useEffect(() => {
     let unsubscribe:
@@ -171,29 +192,35 @@ function App() {
 
         if (!mounted) return;
 
-        unsubscribe = listenTransactions(
-          (firebaseTransactions) => {
-            if (!mounted) return;
+        unsubscribe =
+          listenTransactions(
+            (
+              firebaseTransactions
+            ) => {
+              if (!mounted) return;
 
-            setTransactions(firebaseTransactions);
-            setLoading(false);
-            setSyncError("");
-          },
-          (error) => {
-            if (!mounted) return;
+              setTransactions(
+                firebaseTransactions
+              );
 
-            console.error(
-              "Firestore dinleme hatası:",
-              error
-            );
+              setLoading(false);
+              setSyncError("");
+            },
+            (error) => {
+              if (!mounted) return;
 
-            setLoading(false);
+              console.error(
+                "Firestore dinleme hatası:",
+                error
+              );
 
-            setSyncError(
-              `Bulut bağlantı hatası: ${error.message}`
-            );
-          }
-        );
+              setLoading(false);
+
+              setSyncError(
+                `Bulut bağlantı hatası: ${error.message}`
+              );
+            }
+          );
       } catch (error) {
         if (!mounted) return;
 
@@ -340,10 +367,16 @@ function App() {
 
   const balance = useMemo(() => {
     return transactions.reduce(
-      (total, transaction) => {
-        return transaction.type === "income"
-          ? total + transaction.amount
-          : total - transaction.amount;
+      (
+        total,
+        transaction
+      ) => {
+        return transaction.type ===
+          "income"
+          ? total +
+              transaction.amount
+          : total -
+              transaction.amount;
       },
       openingBalance
     );
@@ -371,19 +404,23 @@ function App() {
   const todayAlreadyArchived =
     dayEnds.some(
       (record) =>
-        record.dateKey === todayDateKey
+        record.dateKey ===
+        todayDateKey
     );
 
   const lastUpdate =
     transactions.length > 0
       ? new Date(
           transactions[0].createdAt
-        ).toLocaleString("tr-TR", {
-          day: "2-digit",
-          month: "2-digit",
-          hour: "2-digit",
-          minute: "2-digit",
-        })
+        ).toLocaleString(
+          "tr-TR",
+          {
+            day: "2-digit",
+            month: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+          }
+        )
       : "Henüz işlem yok";
 
   function openTransactionModal(
@@ -396,7 +433,9 @@ function App() {
 
   function closeTransactionModal() {
     if (!saving) {
-      setTransactionModalOpen(false);
+      setTransactionModalOpen(
+        false
+      );
     }
   }
 
@@ -415,7 +454,9 @@ function App() {
         createdAt: Date.now(),
       });
 
-      setTransactionModalOpen(false);
+      setTransactionModalOpen(
+        false
+      );
     } catch (error) {
       console.error(
         "İşlem kaydetme hatası:",
@@ -432,10 +473,64 @@ function App() {
     }
   }
 
+  async function handleCashAdjustment(
+    difference: number
+  ): Promise<void> {
+    if (
+      !Number.isFinite(
+        difference
+      ) ||
+      Math.abs(difference) <
+        0.005
+    ) {
+      return;
+    }
+
+    try {
+      setSaving(true);
+      setSyncError("");
+
+      await createTransaction({
+        type:
+          difference > 0
+            ? "income"
+            : "expense",
+
+        amount:
+          Math.abs(difference),
+
+        description:
+          "Kasa Düzeltmesi",
+
+        createdAt: Date.now(),
+      });
+
+      setAdjustmentModalOpen(
+        false
+      );
+    } catch (error) {
+      console.error(
+        "Kasa düzeltme hatası:",
+        error
+      );
+
+      setSyncError(
+        error instanceof Error
+          ? `Kasa düzeltilemedi: ${error.message}`
+          : "Kasa düzeltilemedi."
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
   function openEditModal(
     transaction: Transaction
   ) {
-    setSelectedTransaction(transaction);
+    setSelectedTransaction(
+      transaction
+    );
+
     setEditModalOpen(true);
     setSyncError("");
   }
@@ -444,7 +539,10 @@ function App() {
     if (editing) return;
 
     setEditModalOpen(false);
-    setSelectedTransaction(null);
+
+    setSelectedTransaction(
+      null
+    );
   }
 
   async function saveEditedTransaction(
@@ -457,14 +555,20 @@ function App() {
       setEditing(true);
       setSyncError("");
 
-      await updateTransaction(id, {
-        type,
-        amount,
-        description,
-      });
+      await updateTransaction(
+        id,
+        {
+          type,
+          amount,
+          description,
+        }
+      );
 
       setEditModalOpen(false);
-      setSelectedTransaction(null);
+
+      setSelectedTransaction(
+        null
+      );
     } catch (error) {
       console.error(
         "İşlem düzenleme hatası:",
@@ -484,7 +588,10 @@ function App() {
   function requestDeleteTransaction(
     transaction: Transaction
   ) {
-    setDeleteCandidate(transaction);
+    setDeleteCandidate(
+      transaction
+    );
+
     setSyncError("");
   }
 
@@ -496,7 +603,12 @@ function App() {
 
   async function confirmDeleteTransaction():
     Promise<void> {
-    if (!deleteCandidate || deleting) return;
+    if (
+      !deleteCandidate ||
+      deleting
+    ) {
+      return;
+    }
 
     try {
       setDeleting(true);
@@ -524,7 +636,8 @@ function App() {
   }
 
   async function handleSaveQuickDescriptions(
-    descriptions: QuickDescription[]
+    descriptions:
+      QuickDescription[]
   ): Promise<void> {
     try {
       setSettingsSaving(true);
@@ -556,7 +669,9 @@ function App() {
       setSettingsSaving(true);
       setSyncError("");
 
-      await saveOpeningBalance(amount);
+      await saveOpeningBalance(
+        amount
+      );
     } catch (error) {
       console.error(
         "Başlangıç kasası kaydetme hatası:",
@@ -604,7 +719,9 @@ function App() {
     if (activePage === "home") {
       return (
         <HomePage
-          transactions={transactions}
+          transactions={
+            transactions
+          }
           loading={loading}
           saving={
             saving ||
@@ -618,16 +735,29 @@ function App() {
           }
           lastUpdate={lastUpdate}
           onAddIncome={() =>
-            openTransactionModal("income")
+            openTransactionModal(
+              "income"
+            )
           }
           onAddExpense={() =>
-            openTransactionModal("expense")
+            openTransactionModal(
+              "expense"
+            )
+          }
+          onAdjustBalance={() =>
+            setAdjustmentModalOpen(
+              true
+            )
           }
           onShowAllTransactions={() =>
-            setActivePage("transactions")
+            setActivePage(
+              "transactions"
+            )
           }
           onDayEnd={() =>
-            setDayEndModalOpen(true)
+            setDayEndModalOpen(
+              true
+            )
           }
           onEditTransaction={
             openEditModal
@@ -639,10 +769,15 @@ function App() {
       );
     }
 
-    if (activePage === "transactions") {
+    if (
+      activePage ===
+      "transactions"
+    ) {
       return (
         <TransactionsPage
-          transactions={transactions}
+          transactions={
+            transactions
+          }
           loading={loading}
           onEditTransaction={
             openEditModal
@@ -654,10 +789,14 @@ function App() {
       );
     }
 
-    if (activePage === "reports") {
+    if (
+      activePage === "reports"
+    ) {
       return (
         <ReportsPage
-          transactions={transactions}
+          transactions={
+            transactions
+          }
           dayEnds={dayEnds}
         />
       );
@@ -671,8 +810,12 @@ function App() {
         openingBalance={
           openingBalance
         }
-        loading={settingsLoading}
-        saving={settingsSaving}
+        loading={
+          settingsLoading
+        }
+        saving={
+          settingsSaving
+        }
         onSaveQuickDescriptions={
           handleSaveQuickDescriptions
         }
@@ -695,7 +838,9 @@ function App() {
       />
 
       <AddTransactionModal
-        open={transactionModalOpen}
+        open={
+          transactionModalOpen
+        }
         type={transactionType}
         quickDescriptions={
           quickDescriptions
@@ -706,13 +851,35 @@ function App() {
         onSave={saveTransaction}
       />
 
+      <CashAdjustmentModal
+        open={
+          adjustmentModalOpen
+        }
+        currentBalance={
+          balance
+        }
+        saving={saving}
+        onClose={() => {
+          if (!saving) {
+            setAdjustmentModalOpen(
+              false
+            );
+          }
+        }}
+        onSave={
+          handleCashAdjustment
+        }
+      />
+
       <EditTransactionModal
         open={editModalOpen}
         transaction={
           selectedTransaction
         }
         saving={editing}
-        onClose={closeEditModal}
+        onClose={
+          closeEditModal
+        }
         onSave={
           saveEditedTransaction
         }
@@ -720,20 +887,25 @@ function App() {
 
       <DeleteTransactionModal
         open={
-          deleteCandidate !== null
+          deleteCandidate !==
+          null
         }
         transaction={
           deleteCandidate
         }
         deleting={deleting}
-        onClose={closeDeleteModal}
+        onClose={
+          closeDeleteModal
+        }
         onConfirm={
           confirmDeleteTransaction
         }
       />
 
       <DayEndModal
-        open={dayEndModalOpen}
+        open={
+          dayEndModalOpen
+        }
         transactions={
           todayTransactions
         }
@@ -748,7 +920,9 @@ function App() {
           handleArchiveDayEnd
         }
         onClose={() =>
-          setDayEndModalOpen(false)
+          setDayEndModalOpen(
+            false
+          )
         }
       />
     </>
