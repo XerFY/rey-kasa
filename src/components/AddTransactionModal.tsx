@@ -1,10 +1,15 @@
 import {
+  Check,
+  Zap,
+  X,
+} from "lucide-react";
+
+import {
   useEffect,
   useRef,
   useState,
   type FormEvent,
 } from "react";
-import { Check, X } from "lucide-react";
 
 import "../styles/Modal.css";
 
@@ -15,13 +20,29 @@ import type {
 type Props = {
   open: boolean;
   type: "income" | "expense";
-  quickDescriptions: QuickDescription[];
+
+  quickDescriptions:
+    QuickDescription[];
+
   onClose: () => void;
+
   onSave: (
     amount: number,
     description: string
   ) => void | Promise<void>;
 };
+
+function formatMoney(
+  amount: number
+): string {
+  return amount.toLocaleString(
+    "tr-TR",
+    {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }
+  );
+}
 
 function AddTransactionModal({
   open,
@@ -33,21 +54,22 @@ function AddTransactionModal({
   const [amount, setAmount] =
     useState("");
 
-  const [description, setDescription] =
-    useState("");
+  const [
+    description,
+    setDescription,
+  ] = useState("");
 
   const sheetRef =
     useRef<HTMLElement>(null);
 
   const visibleDescriptions =
     quickDescriptions.filter(
-      (item) => item.type === type
+      (item) =>
+        item.type === type
     );
 
   useEffect(() => {
-    if (!open) {
-      return;
-    }
+    if (!open) return;
 
     setAmount("");
     setDescription("");
@@ -64,24 +86,25 @@ function AddTransactionModal({
     };
   }, [open]);
 
-  if (!open) {
-    return null;
-  }
+  if (!open) return null;
 
   async function handleSubmit(
     event: FormEvent<HTMLFormElement>
   ) {
     event.preventDefault();
 
-    const normalizedAmount = amount
-      .replace(/\./g, "")
-      .replace(",", ".");
+    const normalizedAmount =
+      amount
+        .replace(/\./g, "")
+        .replace(",", ".");
 
     const numericAmount =
       Number(normalizedAmount);
 
     if (
-      !Number.isFinite(numericAmount) ||
+      !Number.isFinite(
+        numericAmount
+      ) ||
       numericAmount <= 0
     ) {
       return;
@@ -89,17 +112,44 @@ function AddTransactionModal({
 
     await onSave(
       numericAmount,
+
       description.trim() ||
-        (type === "income"
-          ? "Gelir"
-          : "Gider")
+        (
+          type === "income"
+            ? "Gelir"
+            : "Gider"
+        )
     );
+  }
+
+  function handleQuickDescription(
+    item: QuickDescription
+  ) {
+    setDescription(item.label);
+
+    if (
+      typeof item.amount ===
+        "number" &&
+      item.amount > 0
+    ) {
+      void onSave(
+        item.amount,
+        item.label
+      );
+
+      return;
+    }
+
+    setAmount("");
   }
 
   function handleInputFocus() {
     window.setTimeout(() => {
       sheetRef.current?.scrollTo({
-        top: sheetRef.current.scrollHeight,
+        top:
+          sheetRef.current
+            .scrollHeight,
+
         behavior: "smooth",
       });
     }, 250);
@@ -167,7 +217,9 @@ function AddTransactionModal({
                     event.target.value
                   )
                 }
-                onFocus={handleInputFocus}
+                onFocus={
+                  handleInputFocus
+                }
                 autoComplete="off"
                 autoFocus
               />
@@ -191,7 +243,9 @@ function AddTransactionModal({
                   event.target.value
                 )
               }
-              onFocus={handleInputFocus}
+              onFocus={
+                handleInputFocus
+              }
               maxLength={80}
               autoComplete="off"
             />
@@ -212,6 +266,11 @@ function AddTransactionModal({
                         description ===
                         item.label;
 
+                      const hasAmount =
+                        typeof item.amount ===
+                          "number" &&
+                        item.amount > 0;
+
                       return (
                         <button
                           type="button"
@@ -220,20 +279,37 @@ function AddTransactionModal({
                             selected
                               ? "selected"
                               : ""
+                          } ${
+                            hasAmount
+                              ? "quick-save-button"
+                              : ""
                           }`}
                           onClick={() =>
-                            setDescription(
-                              item.label
+                            handleQuickDescription(
+                              item
                             )
                           }
                         >
-                          {selected && (
+                          {hasAmount ? (
+                            <Zap size={15} />
+                          ) : selected ? (
                             <Check
                               size={15}
                             />
-                          )}
+                          ) : null}
 
-                          {item.label}
+                          <span>
+                            {item.label}
+                          </span>
+
+                          {hasAmount && (
+                            <b>
+                              ₺
+                              {formatMoney(
+                                item.amount!
+                              )}
+                            </b>
+                          )}
                         </button>
                       );
                     }

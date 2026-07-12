@@ -1,7 +1,6 @@
 import {
   Bell,
   Building2,
-  Check,
   MessageSquareText,
   Moon,
   Plus,
@@ -20,13 +19,14 @@ import {
 
 import "../styles/SettingsPage.css";
 
+import AuditHistory from "../components/AuditHistory";
 import OpeningBalanceCard from "../components/OpeningBalanceCard";
 
-import {
-  type AppSettings,
-  type QuickDescription,
-  type QuickDescriptionType,
-  type ThemeMode,
+import type {
+  AppSettings,
+  QuickDescription,
+  QuickDescriptionType,
+  ThemeMode,
 } from "../types/AppSettings";
 
 type Props = {
@@ -58,6 +58,11 @@ function SettingsPage({
   const [
     newDescription,
     setNewDescription,
+  ] = useState("");
+
+  const [
+    newDescriptionAmount,
+    setNewDescriptionAmount,
   ] = useState("");
 
   const [
@@ -99,14 +104,37 @@ function SettingsPage({
   const incomeDescriptions =
     settings.quickDescriptions.filter(
       (description) =>
-        description.type === "income"
+        description.type ===
+        "income"
     );
 
   const expenseDescriptions =
     settings.quickDescriptions.filter(
       (description) =>
-        description.type === "expense"
+        description.type ===
+        "expense"
     );
+
+  function updateSetting<
+    Key extends keyof AppSettings,
+  >(
+    key: Key,
+    value: AppSettings[Key]
+  ) {
+    setDraft((current) => ({
+      ...current,
+      [key]: value,
+    }));
+  }
+
+  function updateTheme(
+    theme: ThemeMode
+  ) {
+    updateSetting(
+      "theme",
+      theme
+    );
+  }
 
   async function handleAddDescription(
     event: FormEvent<HTMLFormElement>
@@ -139,10 +167,30 @@ function SettingsPage({
       return;
     }
 
+    const normalizedAmount =
+      newDescriptionAmount
+        .replace(/\./g, "")
+        .replace(",", ".");
+
+    const numericAmount =
+      Number(normalizedAmount);
+
     const newItem: QuickDescription = {
       id: crypto.randomUUID(),
       type: selectedType,
       label: cleanLabel,
+
+      ...(
+        Number.isFinite(
+          numericAmount
+        ) &&
+        numericAmount > 0
+          ? {
+              amount:
+                numericAmount,
+            }
+          : {}
+      ),
     };
 
     await onSaveQuickDescriptions([
@@ -151,9 +199,13 @@ function SettingsPage({
     ]);
 
     setNewDescription("");
+    setNewDescriptionAmount("");
 
     setSavedMessage(
-      "Hazır açıklama eklendi"
+      typeof newItem.amount ===
+        "number"
+        ? "Tek dokunuşluk işlem eklendi"
+        : "Hazır açıklama eklendi"
     );
   }
 
@@ -184,15 +236,6 @@ function SettingsPage({
     setSavedMessage(
       "Ayarlar kaydedildi"
     );
-  }
-
-  function updateTheme(
-    theme: ThemeMode
-  ) {
-    setDraft((current) => ({
-      ...current,
-      theme,
-    }));
   }
 
   function renderDescriptionGroup(
@@ -230,9 +273,29 @@ function SettingsPage({
                   className="description-item"
                   key={description.id}
                 >
-                  <span>
-                    {description.label}
-                  </span>
+                  <div className="description-item-info">
+                    <span>
+                      {
+                        description.label
+                      }
+                    </span>
+
+                    {typeof description.amount ===
+                      "number" &&
+                      description.amount >
+                        0 && (
+                      <small>
+                        Tek dokunuş: ₺
+                        {description.amount.toLocaleString(
+                          "tr-TR",
+                          {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          }
+                        )}
+                      </small>
+                    )}
+                  </div>
 
                   <button
                     type="button"
@@ -270,7 +333,6 @@ function SettingsPage({
 
       {savedMessage && (
         <div className="settings-global-message">
-          <Check size={18} />
           {savedMessage}
         </div>
       )}
@@ -298,11 +360,13 @@ function SettingsPage({
             </div>
 
             <div>
-              <h2>İşletme Bilgileri</h2>
+              <h2>
+                İşletme Bilgileri
+              </h2>
 
               <p>
-                Gün sonu raporu ve fişte
-                gösterilecek bilgiler.
+                Gün sonu raporu ve
+                fişte gösterilecek bilgiler.
               </p>
             </div>
           </div>
@@ -317,14 +381,9 @@ function SettingsPage({
                   draft.businessName
                 }
                 onChange={(event) =>
-                  setDraft(
-                    (current) => ({
-                      ...current,
-
-                      businessName:
-                        event.target
-                          .value,
-                    })
+                  updateSetting(
+                    "businessName",
+                    event.target.value
                   )
                 }
                 maxLength={50}
@@ -341,14 +400,9 @@ function SettingsPage({
                   draft.businessPhone
                 }
                 onChange={(event) =>
-                  setDraft(
-                    (current) => ({
-                      ...current,
-
-                      businessPhone:
-                        event.target
-                          .value,
-                    })
+                  updateSetting(
+                    "businessPhone",
+                    event.target.value
                   )
                 }
                 maxLength={25}
@@ -358,7 +412,9 @@ function SettingsPage({
             </label>
 
             <label>
-              <span>Fiş Alt Yazısı</span>
+              <span>
+                Fiş Alt Yazısı
+              </span>
 
               <input
                 type="text"
@@ -366,14 +422,9 @@ function SettingsPage({
                   draft.receiptFooter
                 }
                 onChange={(event) =>
-                  setDraft(
-                    (current) => ({
-                      ...current,
-
-                      receiptFooter:
-                        event.target
-                          .value,
-                    })
+                  updateSetting(
+                    "receiptFooter",
+                    event.target.value
                   )
                 }
                 maxLength={70}
@@ -393,8 +444,7 @@ function SettingsPage({
               <h2>Görünüm</h2>
 
               <p>
-                Uygulamanın görünüm
-                temasını seç.
+                Uygulamanın temasını seç.
               </p>
             </div>
           </div>
@@ -411,7 +461,7 @@ function SettingsPage({
                 updateTheme("light")
               }
             >
-              <Sun size={19} />
+              <Sun size={18} />
               Açık
             </button>
 
@@ -426,7 +476,7 @@ function SettingsPage({
                 updateTheme("dark")
               }
             >
-              <Moon size={19} />
+              <Moon size={18} />
               Koyu
             </button>
 
@@ -453,11 +503,13 @@ function SettingsPage({
             </div>
 
             <div>
-              <h2>Gün Sonu Hatırlatıcısı</h2>
+              <h2>
+                Gün Sonu Hatırlatıcısı
+              </h2>
 
               <p>
-                Belirlenen saatte gün sonu
-                uyarısı gösterir.
+                Belirlenen saatte uyarı
+                gösterir.
               </p>
             </div>
           </div>
@@ -469,7 +521,8 @@ function SettingsPage({
               </strong>
 
               <span>
-                Gün sonunu unutmanı önler.
+                Gün sonunu unutmanı
+                önler.
               </span>
             </div>
 
@@ -479,14 +532,9 @@ function SettingsPage({
                 draft.dayEndReminderEnabled
               }
               onChange={(event) =>
-                setDraft(
-                  (current) => ({
-                    ...current,
-
-                    dayEndReminderEnabled:
-                      event.target
-                        .checked,
-                  })
+                updateSetting(
+                  "dayEndReminderEnabled",
+                  event.target.checked
                 )
               }
             />
@@ -504,14 +552,9 @@ function SettingsPage({
                   draft.dayEndReminderTime
                 }
                 onChange={(event) =>
-                  setDraft(
-                    (current) => ({
-                      ...current,
-
-                      dayEndReminderTime:
-                        event.target
-                          .value,
-                    })
+                  updateSetting(
+                    "dayEndReminderTime",
+                    event.target.value
                   )
                 }
               />
@@ -528,11 +571,13 @@ function SettingsPage({
             </div>
 
             <div>
-              <h2>Büyük Tutar Uyarısı</h2>
+              <h2>
+                Büyük Tutar Uyarısı
+              </h2>
 
               <p>
-                Belirlenen tutarın üzerindeki
-                işlemlerde onay ister.
+                Yüksek tutarlı işlemlerde
+                onay ister.
               </p>
             </div>
           </div>
@@ -555,14 +600,9 @@ function SettingsPage({
                 draft.largeTransactionWarningEnabled
               }
               onChange={(event) =>
-                setDraft(
-                  (current) => ({
-                    ...current,
-
-                    largeTransactionWarningEnabled:
-                      event.target
-                        .checked,
-                  })
+                updateSetting(
+                  "largeTransactionWarningEnabled",
+                  event.target.checked
                 )
               }
             />
@@ -586,16 +626,11 @@ function SettingsPage({
                     draft.largeTransactionThreshold
                   }
                   onChange={(event) =>
-                    setDraft(
-                      (current) => ({
-                        ...current,
-
-                        largeTransactionThreshold:
-                          Number(
-                            event.target
-                              .value
-                          ),
-                      })
+                    updateSetting(
+                      "largeTransactionThreshold",
+                      Number(
+                        event.target.value
+                      )
                     )
                   }
                 />
@@ -614,9 +649,8 @@ function SettingsPage({
               <h2>XP-Q80A Yazıcı</h2>
 
               <p>
-                Yazıcı dükkânda test
-                edildiğinde kullanılacak ağ
-                ayarları.
+                Yazıcı ağ ve otomatik
+                çıktı ayarları.
               </p>
             </div>
           </div>
@@ -628,8 +662,8 @@ function SettingsPage({
               </strong>
 
               <span>
-                XP-Q80A bağlantısını
-                etkinleştir.
+                Yazıcı kuyruğunu
+                etkinleştirir.
               </span>
             </div>
 
@@ -658,7 +692,7 @@ function SettingsPage({
 
           <div className="printer-fields">
             <label>
-              <span>Yazıcı IP Adresi</span>
+              <span>IP Adresi</span>
 
               <input
                 type="text"
@@ -706,8 +740,7 @@ function SettingsPage({
                         ...current.printer,
 
                         port: Number(
-                          event.target
-                            .value
+                          event.target.value
                         ),
                       },
                     })
@@ -727,8 +760,8 @@ function SettingsPage({
               </strong>
 
               <span>
-                Gün sonu kaydedildiğinde
-                yazdırma kuyruğuna ekler.
+                Gün sonunda yazdırma
+                kuyruğuna ekler.
               </span>
             </div>
 
@@ -782,11 +815,13 @@ function SettingsPage({
           </div>
 
           <div>
-            <h2>Hazır Açıklamalar</h2>
+            <h2>
+              Hazır İşlemler
+            </h2>
 
             <p>
-              Gelir ve gider ekranlarında
-              hızlı seçim için kullanılır.
+              Tutar girilirse tek
+              dokunuşla kaydedilir.
             </p>
           </div>
         </div>
@@ -844,6 +879,25 @@ function SettingsPage({
             disabled={saving}
           />
 
+          <div className="quick-amount-setting">
+            <b>₺</b>
+
+            <input
+              type="text"
+              inputMode="decimal"
+              placeholder="Tutar (isteğe bağlı)"
+              value={
+                newDescriptionAmount
+              }
+              onChange={(event) =>
+                setNewDescriptionAmount(
+                  event.target.value
+                )
+              }
+              disabled={saving}
+            />
+          </div>
+
           <button
             type="submit"
             disabled={
@@ -863,19 +917,21 @@ function SettingsPage({
         ) : (
           <div className="description-groups">
             {renderDescriptionGroup(
-              "Gelir Açıklamaları",
+              "Gelir İşlemleri",
               incomeDescriptions,
               "income"
             )}
 
             {renderDescriptionGroup(
-              "Gider Açıklamaları",
+              "Gider İşlemleri",
               expenseDescriptions,
               "expense"
             )}
           </div>
         )}
       </article>
+
+      <AuditHistory />
     </section>
   );
 }

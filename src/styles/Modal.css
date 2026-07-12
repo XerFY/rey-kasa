@@ -287,3 +287,32 @@
   background: var(--primary-soft);
   color: var(--primary);
 }
+.quick-description-button.quick-save-button {
+  border-color:
+    color-mix(
+      in srgb,
+      var(--primary) 50%,
+      var(--border)
+    );
+
+  background: var(--primary-soft);
+}
+
+.quick-save-button span {
+  min-width: 0;
+  flex: 1;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  text-align: left;
+}
+
+.quick-save-button b {
+  flex-shrink: 0;
+
+  color: var(--primary);
+
+  font-size: 11px;
+}

@@ -38,11 +38,21 @@ function isQuickDescription(
   >;
 
   return (
-    typeof item.id === "string" &&
-    typeof item.label === "string" &&
-    (item.type === "income" ||
-      item.type === "expense")
-  );
+  typeof item.id === "string" &&
+  typeof item.label === "string" &&
+  (
+    item.type === "income" ||
+    item.type === "expense"
+  ) &&
+  (
+    item.amount === undefined ||
+    (
+      typeof item.amount === "number" &&
+      Number.isFinite(item.amount) &&
+      item.amount > 0
+    )
+  )
+);
 }
 
 function isThemeMode(
@@ -245,11 +255,30 @@ export async function saveQuickDescriptions(
 ): Promise<void> {
   const cleanDescriptions =
     descriptions
-      .map((description) => ({
-        id: description.id,
-        type: description.type,
-        label: description.label.trim(),
-      }))
+      .map((description) => {
+        const cleanAmount =
+          typeof description.amount ===
+            "number" &&
+          Number.isFinite(
+            description.amount
+          ) &&
+          description.amount > 0
+            ? description.amount
+            : null;
+
+        return {
+          id: description.id,
+          type: description.type,
+          label:
+            description.label.trim(),
+
+          ...(cleanAmount !== null
+            ? {
+                amount: cleanAmount,
+              }
+            : {}),
+        };
+      })
       .filter(
         (description) =>
           description.id &&

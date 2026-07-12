@@ -6,6 +6,10 @@ export type QuickDescription = {
   id: string;
   type: QuickDescriptionType;
   label: string;
+
+  // Tutar girilmişse tek dokunuşla
+  // işlem kaydedilir.
+  amount?: number;
 };
 
 export type ThemeMode =
@@ -15,14 +19,19 @@ export type ThemeMode =
 
 export type PrinterSettings = {
   enabled: boolean;
+
   ipAddress: string;
   port: number;
+
   autoPrintDayEnd: boolean;
+
   charactersPerLine: number;
 };
 
 export type AppSettings = {
-  quickDescriptions: QuickDescription[];
+  quickDescriptions:
+    QuickDescription[];
+
   openingBalance: number;
 
   businessName: string;
@@ -34,35 +43,52 @@ export type AppSettings = {
   dayEndReminderEnabled: boolean;
   dayEndReminderTime: string;
 
-  largeTransactionWarningEnabled: boolean;
-  largeTransactionThreshold: number;
+  largeTransactionWarningEnabled:
+    boolean;
+
+  largeTransactionThreshold:
+    number;
 
   printer: PrinterSettings;
 };
 
-export const defaultPrinterSettings: PrinterSettings = {
-  enabled: false,
-  ipAddress: "",
-  port: 9100,
-  autoPrintDayEnd: false,
-  charactersPerLine: 48,
-};
+export const defaultPrinterSettings:
+  PrinterSettings = {
+    enabled: false,
 
-export const defaultAppSettings: AppSettings = {
-  quickDescriptions: [],
-  openingBalance: 0,
+    ipAddress: "",
+    port: 9100,
 
-  businessName: "REY KASA",
-  businessPhone: "",
-  receiptFooter: "İyi çalışmalar",
+    autoPrintDayEnd: false,
 
-  theme: "light",
+    charactersPerLine: 48,
+  };
 
-  dayEndReminderEnabled: false,
-  dayEndReminderTime: "20:00",
+export const defaultAppSettings:
+  AppSettings = {
+    quickDescriptions: [],
 
-  largeTransactionWarningEnabled: true,
-  largeTransactionThreshold: 50000,
+    openingBalance: 0,
 
-  printer: defaultPrinterSettings,
-};
+    businessName: "REY KASA",
+    businessPhone: "",
+    receiptFooter:
+      "İyi çalışmalar",
+
+    theme: "light",
+
+    dayEndReminderEnabled:
+      false,
+
+    dayEndReminderTime:
+      "20:00",
+
+    largeTransactionWarningEnabled:
+      true,
+
+    largeTransactionThreshold:
+      50000,
+
+    printer:
+      defaultPrinterSettings,
+  };
