@@ -1,4 +1,5 @@
 import {
+  CalendarRange,
   Search,
   SlidersHorizontal,
   X,
@@ -23,7 +24,8 @@ type DateFilter =
   | "all"
   | "today"
   | "week"
-  | "month";
+  | "month"
+  | "custom";
 
 type Props = {
   transactions: Transaction[];
@@ -38,12 +40,27 @@ type Props = {
   ) => void;
 };
 
-function getDateFilterStart(
+function formatMoney(
+  amount: number
+): string {
+  return amount.toLocaleString(
+    "tr-TR",
+    {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }
+  );
+}
+
+function getQuickDateStart(
   filter: DateFilter
 ): number | null {
   const now = new Date();
 
-  if (filter === "all") {
+  if (
+    filter === "all" ||
+    filter === "custom"
+  ) {
     return null;
   }
 
@@ -75,14 +92,48 @@ function getDateFilterStart(
   ).getTime();
 }
 
+function parseLocalDate(
+  value: string,
+  endOfDay = false
+): number | null {
+  if (!value) {
+    return null;
+  }
+
+  const [year, month, day] =
+    value
+      .split("-")
+      .map(Number);
+
+  if (
+    !year ||
+    !month ||
+    !day
+  ) {
+    return null;
+  }
+
+  return new Date(
+    year,
+    month - 1,
+    day,
+    endOfDay ? 23 : 0,
+    endOfDay ? 59 : 0,
+    endOfDay ? 59 : 0,
+    endOfDay ? 999 : 0
+  ).getTime();
+}
+
 function TransactionsPage({
   transactions,
   loading,
   onEditTransaction,
   onDeleteTransaction,
 }: Props) {
-  const [searchText, setSearchText] =
-    useState("");
+  const [
+    searchText,
+    setSearchText,
+  ] = useState("");
 
   const [
     transactionFilter,
@@ -96,6 +147,16 @@ function TransactionsPage({
     setDateFilter,
   ] = useState<DateFilter>("all");
 
+  const [
+    startDate,
+    setStartDate,
+  ] = useState("");
+
+  const [
+    endDate,
+    setEndDate,
+  ] = useState("");
+
   const filteredTransactions =
     useMemo(() => {
       const normalizedSearch =
@@ -105,10 +166,25 @@ function TransactionsPage({
             "tr-TR"
           );
 
-      const dateStart =
-        getDateFilterStart(
+      const quickDateStart =
+        getQuickDateStart(
           dateFilter
         );
+
+      const customStart =
+        dateFilter === "custom"
+          ? parseLocalDate(
+              startDate
+            )
+          : null;
+
+      const customEnd =
+        dateFilter === "custom"
+          ? parseLocalDate(
+              endDate,
+              true
+            )
+          : null;
 
       return transactions.filter(
         (transaction) => {
@@ -128,15 +204,27 @@ function TransactionsPage({
             transaction.type ===
               transactionFilter;
 
-          const matchesDate =
-            dateStart === null ||
+          const matchesQuickDate =
+            quickDateStart === null ||
             transaction.createdAt >=
-              dateStart;
+              quickDateStart;
+
+          const matchesCustomStart =
+            customStart === null ||
+            transaction.createdAt >=
+              customStart;
+
+          const matchesCustomEnd =
+            customEnd === null ||
+            transaction.createdAt <=
+              customEnd;
 
           return (
             matchesSearch &&
             matchesType &&
-            matchesDate
+            matchesQuickDate &&
+            matchesCustomStart &&
+            matchesCustomEnd
           );
         }
       );
@@ -145,17 +233,66 @@ function TransactionsPage({
       searchText,
       transactionFilter,
       dateFilter,
+      startDate,
+      endDate,
     ]);
+
+  const totalIncome =
+    useMemo(() => {
+      return filteredTransactions
+        .filter(
+          (transaction) =>
+            transaction.type ===
+            "income"
+        )
+        .reduce(
+          (total, transaction) =>
+            total +
+            transaction.amount,
+          0
+        );
+    }, [filteredTransactions]);
+
+  const totalExpense =
+    useMemo(() => {
+      return filteredTransactions
+        .filter(
+          (transaction) =>
+            transaction.type ===
+            "expense"
+        )
+        .reduce(
+          (total, transaction) =>
+            total +
+            transaction.amount,
+          0
+        );
+    }, [filteredTransactions]);
 
   const filtersActive =
     searchText.trim() !== "" ||
     transactionFilter !== "all" ||
-    dateFilter !== "all";
+    dateFilter !== "all" ||
+    startDate !== "" ||
+    endDate !== "";
 
   function clearFilters() {
     setSearchText("");
     setTransactionFilter("all");
     setDateFilter("all");
+    setStartDate("");
+    setEndDate("");
+  }
+
+  function selectDateFilter(
+    filter: DateFilter
+  ) {
+    setDateFilter(filter);
+
+    if (filter !== "custom") {
+      setStartDate("");
+      setEndDate("");
+    }
   }
 
   return (
@@ -166,8 +303,8 @@ function TransactionsPage({
         <h1>İşlemler</h1>
 
         <p>
-          Tüm gelir ve gider kayıtlarını
-          ara ve filtrele.
+          Tüm gelir ve gider
+          kayıtlarını ara ve filtrele.
         </p>
       </header>
 
@@ -265,10 +402,16 @@ function TransactionsPage({
 
       <div className="filter-section">
         <div className="filter-title">
-          <span>Tarih</span>
+          <div>
+            <CalendarRange
+              size={17}
+            />
+
+            <span>Tarih</span>
+          </div>
         </div>
 
-        <div className="date-filter-buttons">
+        <div className="date-filter-buttons date-filter-five">
           <button
             type="button"
             className={
@@ -277,7 +420,7 @@ function TransactionsPage({
                 : ""
             }
             onClick={() =>
-              setDateFilter("all")
+              selectDateFilter("all")
             }
           >
             Tümü
@@ -291,7 +434,9 @@ function TransactionsPage({
                 : ""
             }
             onClick={() =>
-              setDateFilter("today")
+              selectDateFilter(
+                "today"
+              )
             }
           >
             Bugün
@@ -305,7 +450,9 @@ function TransactionsPage({
                 : ""
             }
             onClick={() =>
-              setDateFilter("week")
+              selectDateFilter(
+                "week"
+              )
             }
           >
             Bu Hafta
@@ -319,12 +466,66 @@ function TransactionsPage({
                 : ""
             }
             onClick={() =>
-              setDateFilter("month")
+              selectDateFilter(
+                "month"
+              )
             }
           >
             Bu Ay
           </button>
+
+          <button
+            type="button"
+            className={
+              dateFilter === "custom"
+                ? "active"
+                : ""
+            }
+            onClick={() =>
+              selectDateFilter(
+                "custom"
+              )
+            }
+          >
+            Özel
+          </button>
         </div>
+
+        {dateFilter === "custom" && (
+          <div className="custom-date-area">
+            <label>
+              <span>Başlangıç</span>
+
+              <input
+                type="date"
+                value={startDate}
+                onChange={(event) =>
+                  setStartDate(
+                    event.target.value
+                  )
+                }
+              />
+            </label>
+
+            <label>
+              <span>Bitiş</span>
+
+              <input
+                type="date"
+                min={
+                  startDate ||
+                  undefined
+                }
+                value={endDate}
+                onChange={(event) =>
+                  setEndDate(
+                    event.target.value
+                  )
+                }
+              />
+            </label>
+          </div>
+        )}
       </div>
 
       <div className="transaction-results-heading">
@@ -343,6 +544,59 @@ function TransactionsPage({
           </button>
         )}
       </div>
+
+      {!loading && (
+        <div className="filtered-summary">
+          <div>
+            <span>Gelir</span>
+
+            <strong className="filtered-income">
+              ₺
+              {formatMoney(
+                totalIncome
+              )}
+            </strong>
+          </div>
+
+          <div>
+            <span>Gider</span>
+
+            <strong className="filtered-expense">
+              ₺
+              {formatMoney(
+                totalExpense
+              )}
+            </strong>
+          </div>
+
+          <div>
+            <span>Net</span>
+
+            <strong
+              className={
+                totalIncome -
+                  totalExpense >=
+                0
+                  ? "filtered-income"
+                  : "filtered-expense"
+              }
+            >
+              {totalIncome -
+                totalExpense >=
+              0
+                ? "+"
+                : "-"}
+              ₺
+              {formatMoney(
+                Math.abs(
+                  totalIncome -
+                    totalExpense
+                )
+              )}
+            </strong>
+          </div>
+        </div>
+      )}
 
       <div className="transactions">
         <TransactionList

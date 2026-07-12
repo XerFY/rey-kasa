@@ -197,3 +197,115 @@
     grid-template-columns: repeat(2, 1fr);
   }
 }
+.date-filter-five {
+  grid-template-columns:
+    repeat(5, 1fr);
+}
+
+.custom-date-area {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px;
+
+  margin-top: 11px;
+  padding: 12px;
+
+  border: 1px solid var(--border);
+  border-radius: 16px;
+
+  background: var(--surface);
+}
+
+.custom-date-area label {
+  min-width: 0;
+}
+
+.custom-date-area span {
+  display: block;
+
+  margin-bottom: 7px;
+
+  color: var(--text-secondary);
+
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.custom-date-area input {
+  width: 100%;
+  min-height: 45px;
+
+  padding: 0 9px;
+
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  outline: 0;
+
+  background: var(--surface-soft);
+  color: var(--text);
+
+  font-size: 12px;
+}
+
+.custom-date-area input:focus {
+  border-color: var(--primary);
+  box-shadow:
+    0 0 0 3px
+    var(--primary-soft);
+}
+
+.filtered-summary {
+  display: grid;
+  grid-template-columns:
+    repeat(3, 1fr);
+  gap: 8px;
+
+  margin-bottom: 17px;
+}
+
+.filtered-summary > div {
+  min-width: 0;
+
+  padding: 11px;
+
+  border: 1px solid var(--border);
+  border-radius: 14px;
+
+  background: var(--surface);
+
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.filtered-summary span {
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.filtered-summary strong {
+  overflow-wrap: anywhere;
+  font-size: 12px;
+}
+
+.filtered-income {
+  color: var(--success);
+}
+
+.filtered-expense {
+  color: var(--danger);
+}
+
+@media (max-width: 440px) {
+  .date-filter-five {
+    grid-template-columns:
+      repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 380px) {
+  .custom-date-area {
+    grid-template-columns: 1fr;
+  }
+}
