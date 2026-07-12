@@ -5,7 +5,9 @@ import {
 } from "react";
 
 import "./App.css";
-
+import type {
+  QuickDescription,
+} from "./types/AppSettings";
 import AddTransactionModal from "./components/AddTransactionModal";
 import BottomNavigation, {
   type AppPage,
@@ -87,9 +89,9 @@ function App() {
   ] = useState<TransactionType>("income");
 
   const [
-    quickDescriptions,
-    setQuickDescriptions,
-  ] = useState<string[]>([]);
+  quickDescriptions,
+  setQuickDescriptions,
+] = useState<QuickDescription[]>([]);
 
   const [loading, setLoading] =
     useState(true);
@@ -444,8 +446,8 @@ function App() {
   }
 
   async function handleSaveQuickDescriptions(
-    descriptions: string[]
-  ): Promise<void> {
+  descriptions: QuickDescription[]
+): Promise<void> {
     try {
       setSettingsSaving(true);
       setSyncError("");

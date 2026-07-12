@@ -12,12 +12,17 @@ import {
 
 import "../styles/SettingsPage.css";
 
+import type {
+  QuickDescription,
+  QuickDescriptionType,
+} from "../types/AppSettings";
+
 type Props = {
-  quickDescriptions: string[];
+  quickDescriptions: QuickDescription[];
   loading: boolean;
   saving: boolean;
   onSaveQuickDescriptions: (
-    descriptions: string[]
+    descriptions: QuickDescription[]
   ) => void | Promise<void>;
 };
 
@@ -30,6 +35,11 @@ function SettingsPage({
   const [newDescription, setNewDescription] =
     useState("");
 
+  const [selectedType, setSelectedType] =
+    useState<QuickDescriptionType>(
+      "expense"
+    );
+
   const [savedMessage, setSavedMessage] =
     useState(false);
 
@@ -38,32 +48,51 @@ function SettingsPage({
       return;
     }
 
-    const timeout = window.setTimeout(() => {
-      setSavedMessage(false);
-    }, 1800);
+    const timeout =
+      window.setTimeout(() => {
+        setSavedMessage(false);
+      }, 1800);
 
     return () => {
       window.clearTimeout(timeout);
     };
   }, [savedMessage]);
 
+  const incomeDescriptions =
+    quickDescriptions.filter(
+      (description) =>
+        description.type === "income"
+    );
+
+  const expenseDescriptions =
+    quickDescriptions.filter(
+      (description) =>
+        description.type === "expense"
+    );
+
   async function handleAdd(
     event: FormEvent<HTMLFormElement>
   ) {
     event.preventDefault();
 
-    const cleanDescription =
+    const cleanLabel =
       newDescription.trim();
 
-    if (!cleanDescription) {
+    if (!cleanLabel) {
       return;
     }
 
     const alreadyExists =
       quickDescriptions.some(
         (description) =>
-          description.toLocaleLowerCase("tr-TR") ===
-          cleanDescription.toLocaleLowerCase("tr-TR")
+          description.type ===
+            selectedType &&
+          description.label.toLocaleLowerCase(
+            "tr-TR"
+          ) ===
+            cleanLabel.toLocaleLowerCase(
+              "tr-TR"
+            )
       );
 
     if (alreadyExists) {
@@ -71,9 +100,15 @@ function SettingsPage({
       return;
     }
 
+    const newItem: QuickDescription = {
+      id: crypto.randomUUID(),
+      type: selectedType,
+      label: cleanLabel,
+    };
+
     await onSaveQuickDescriptions([
       ...quickDescriptions,
-      cleanDescription,
+      newItem,
     ]);
 
     setNewDescription("");
@@ -81,19 +116,76 @@ function SettingsPage({
   }
 
   async function handleDelete(
-    descriptionToDelete: string
+    id: string
   ) {
-    const updatedDescriptions =
+    await onSaveQuickDescriptions(
       quickDescriptions.filter(
         (description) =>
-          description !== descriptionToDelete
-      );
-
-    await onSaveQuickDescriptions(
-      updatedDescriptions
+          description.id !== id
+      )
     );
 
     setSavedMessage(true);
+  }
+
+  function renderDescriptionGroup(
+    title: string,
+    descriptions: QuickDescription[],
+    type: QuickDescriptionType
+  ) {
+    return (
+      <div className="description-group">
+        <div className="description-group-title">
+          <span
+            className={
+              type === "income"
+                ? "group-income"
+                : "group-expense"
+            }
+          >
+            {title}
+          </span>
+
+          <small>
+            {descriptions.length} kayıt
+          </small>
+        </div>
+
+        {descriptions.length === 0 ? (
+          <div className="settings-empty">
+            Bu grupta henüz açıklama yok.
+          </div>
+        ) : (
+          <div className="description-list">
+            {descriptions.map(
+              (description) => (
+                <div
+                  className="description-item"
+                  key={description.id}
+                >
+                  <span>
+                    {description.label}
+                  </span>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      void handleDelete(
+                        description.id
+                      )
+                    }
+                    disabled={saving}
+                    aria-label={`${description.label} açıklamasını sil`}
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                </div>
+              )
+            )}
+          </div>
+        )}
+      </div>
+    );
   }
 
   return (
@@ -103,25 +195,58 @@ function SettingsPage({
         <h1>Ayarlar</h1>
 
         <p>
-          Günlük kullanım seçeneklerini buradan
-          düzenleyebilirsin.
+          Gelir ve gider ekranlarında
+          kullanılacak hazır açıklamaları
+          düzenle.
         </p>
       </header>
 
       <article className="settings-card">
         <div className="settings-card-title">
           <div className="settings-card-icon">
-            <MessageSquareText size={22} />
+            <MessageSquareText
+              size={22}
+            />
           </div>
 
           <div>
             <h2>Hazır Açıklamalar</h2>
 
             <p>
-              Gelir ve gider eklerken tek dokunuşla
-              kullanabileceğin açıklamalar.
+              Açıklamanın gelir veya gider
+              ekranında gösterileceğini seç.
             </p>
           </div>
+        </div>
+
+        <div className="settings-type-selector">
+          <button
+            type="button"
+            className={
+              selectedType === "income"
+                ? "settings-income-selected"
+                : ""
+            }
+            onClick={() =>
+              setSelectedType("income")
+            }
+          >
+            Gelir
+          </button>
+
+          <button
+            type="button"
+            className={
+              selectedType === "expense"
+                ? "settings-expense-selected"
+                : ""
+            }
+            onClick={() =>
+              setSelectedType("expense")
+            }
+          >
+            Gider
+          </button>
         </div>
 
         <form
@@ -130,7 +255,11 @@ function SettingsPage({
         >
           <input
             type="text"
-            placeholder="Örneğin: Nakit"
+            placeholder={
+              selectedType === "income"
+                ? "Örneğin: Nakit Tahsilat"
+                : "Örneğin: Market Ödemesi"
+            }
             value={newDescription}
             onChange={(event) =>
               setNewDescription(
@@ -160,44 +289,29 @@ function SettingsPage({
           </div>
         )}
 
-        <div className="description-list">
-          {loading ? (
-            <div className="settings-empty">
-              Ayarlar yükleniyor...
-            </div>
-          ) : quickDescriptions.length === 0 ? (
-            <div className="settings-empty">
-              Henüz hazır açıklama eklenmedi.
-            </div>
-          ) : (
-            quickDescriptions.map(
-              (description) => (
-                <div
-                  className="description-item"
-                  key={description}
-                >
-                  <span>{description}</span>
+        {loading ? (
+          <div className="settings-empty settings-loading">
+            Ayarlar yükleniyor...
+          </div>
+        ) : (
+          <div className="description-groups">
+            {renderDescriptionGroup(
+              "Gelir Açıklamaları",
+              incomeDescriptions,
+              "income"
+            )}
 
-                  <button
-                    type="button"
-                    onClick={() =>
-                      void handleDelete(
-                        description
-                      )
-                    }
-                    disabled={saving}
-                    aria-label={`${description} açıklamasını sil`}
-                  >
-                    <Trash2 size={18} />
-                  </button>
-                </div>
-              )
-            )
-          )}
-        </div>
+            {renderDescriptionGroup(
+              "Gider Açıklamaları",
+              expenseDescriptions,
+              "expense"
+            )}
+          </div>
+        )}
 
         <footer className="settings-card-footer">
-          {quickDescriptions.length} hazır açıklama
+          Toplam {quickDescriptions.length}{" "}
+          hazır açıklama
         </footer>
       </article>
     </section>

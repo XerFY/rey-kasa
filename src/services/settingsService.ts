@@ -10,6 +10,7 @@ import { db } from "../firebase";
 import {
   defaultAppSettings,
   type AppSettings,
+  type QuickDescription,
 } from "../types/AppSettings";
 
 const settingsDocument = doc(
@@ -17,6 +18,29 @@ const settingsDocument = doc(
   "settings",
   "general"
 );
+
+function isQuickDescription(
+  value: unknown
+): value is QuickDescription {
+  if (
+    typeof value !== "object" ||
+    value === null
+  ) {
+    return false;
+  }
+
+  const item = value as Record<
+    string,
+    unknown
+  >;
+
+  return (
+    typeof item.id === "string" &&
+    typeof item.label === "string" &&
+    (item.type === "income" ||
+      item.type === "expense")
+  );
+}
 
 export function listenSettings(
   onData: (settings: AppSettings) => void,
@@ -32,15 +56,21 @@ export function listenSettings(
 
       const data = snapshot.data();
 
+      const rawDescriptions =
+        data.quickDescriptions;
+
+      if (!Array.isArray(rawDescriptions)) {
+        onData(defaultAppSettings);
+        return;
+      }
+
+      const quickDescriptions =
+        rawDescriptions.filter(
+          isQuickDescription
+        );
+
       onData({
-        quickDescriptions: Array.isArray(
-          data.quickDescriptions
-        )
-          ? data.quickDescriptions.filter(
-              (item): item is string =>
-                typeof item === "string"
-            )
-          : [],
+        quickDescriptions,
       });
     },
     onError
@@ -48,20 +78,26 @@ export function listenSettings(
 }
 
 export async function saveQuickDescriptions(
-  descriptions: string[]
+  descriptions: QuickDescription[]
 ): Promise<void> {
-  const cleanDescriptions = Array.from(
-    new Set(
-      descriptions
-        .map((description) => description.trim())
-        .filter(Boolean)
-    )
-  );
+  const cleanDescriptions =
+    descriptions
+      .map((description) => ({
+        id: description.id,
+        type: description.type,
+        label: description.label.trim(),
+      }))
+      .filter(
+        (description) =>
+          description.id &&
+          description.label
+      );
 
   await setDoc(
     settingsDocument,
     {
-      quickDescriptions: cleanDescriptions,
+      quickDescriptions:
+        cleanDescriptions,
     },
     {
       merge: true,
