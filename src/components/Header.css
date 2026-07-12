@@ -1,0 +1,20 @@
+.header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.header h1 {
+  color: #d4af37;
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  text-shadow: 0 3px 18px rgba(212, 175, 55, 0.18);
+}
+
+.header span {
+  display: block;
+  margin-top: 5px;
+  color: #8e97a4;
+  font-size: 13px;
+  letter-spacing: 0.4px;
+}

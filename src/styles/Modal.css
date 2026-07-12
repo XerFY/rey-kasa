@@ -1,0 +1,167 @@
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-top: 24px;
+  background: rgba(4, 6, 9, 0.72);
+  backdrop-filter: blur(8px);
+  animation: overlay-in 0.2s ease;
+}
+
+.modal-sheet {
+  width: 100%;
+  max-width: 520px;
+  padding: 10px 20px calc(24px + env(safe-area-inset-bottom));
+  border: 1px solid #303640;
+  border-bottom: 0;
+  border-radius: 28px 28px 0 0;
+  background: #1b1f26;
+  box-shadow: 0 -24px 70px rgba(0, 0, 0, 0.5);
+  animation: sheet-in 0.25s ease;
+}
+
+.modal-handle {
+  width: 44px;
+  height: 5px;
+  margin: 0 auto 18px;
+  border-radius: 999px;
+  background: #454c57;
+}
+
+.modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.modal-label {
+  color: #8e97a4;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.modal-header h2 {
+  margin-top: 4px;
+  color: #d4af37;
+  font-size: 25px;
+}
+
+.modal-close {
+  width: 42px;
+  height: 42px;
+  border: 1px solid #343a44;
+  border-radius: 14px;
+  background: #262b33;
+  color: #d5d9df;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.field-label {
+  display: block;
+  margin: 16px 0 8px;
+  color: #aeb6c1;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.amount-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 68px;
+  padding: 0 18px;
+  border: 1px solid #363d47;
+  border-radius: 18px;
+  background: #262b33;
+}
+
+.amount-field span {
+  color: #d4af37;
+  font-size: 25px;
+  font-weight: 800;
+}
+
+.amount-field input {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #ffffff;
+  font-size: 27px;
+  font-weight: 800;
+}
+
+.description-field {
+  width: 100%;
+  min-height: 56px;
+  padding: 0 16px;
+  border: 1px solid #363d47;
+  border-radius: 16px;
+  outline: 0;
+  background: #262b33;
+  color: #ffffff;
+  font-size: 16px;
+}
+
+.amount-field:focus-within,
+.description-field:focus {
+  border-color: rgba(212, 175, 55, 0.75);
+  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.08);
+}
+
+.save-button,
+.cancel-button {
+  width: 100%;
+  min-height: 56px;
+  border: 0;
+  border-radius: 17px;
+  font-size: 16px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.save-button {
+  margin-top: 24px;
+  color: #ffffff;
+}
+
+.save-income {
+  background: linear-gradient(145deg, #1caf5e, #158746);
+}
+
+.save-expense {
+  background: linear-gradient(145deg, #e13d3d, #b91c1c);
+}
+
+.cancel-button {
+  margin-top: 10px;
+  background: #292e36;
+  color: #c8ced6;
+}
+
+@keyframes overlay-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes sheet-in {
+  from {
+    transform: translateY(100%);
+  }
+
+  to {
+    transform: translateY(0);
+  }
+}
