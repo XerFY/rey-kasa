@@ -5,14 +5,21 @@ type PrintDayEndParams = {
   balance: number;
 };
 
-function formatMoney(amount: number): string {
-  return amount.toLocaleString("tr-TR", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
+function formatMoney(
+  amount: number
+): string {
+  return amount.toLocaleString(
+    "tr-TR",
+    {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }
+  );
 }
 
-function escapeHtml(value: string): string {
+function escapeHtml(
+  value: string
+): string {
   return value
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
@@ -26,51 +33,80 @@ export function printDayEndReport({
   balance,
 }: PrintDayEndParams): void {
   const totalIncome = transactions
-    .filter((item) => item.type === "income")
-    .reduce((total, item) => total + item.amount, 0);
+    .filter(
+      (transaction) =>
+        transaction.type === "income"
+    )
+    .reduce(
+      (total, transaction) =>
+        total + transaction.amount,
+      0
+    );
 
   const totalExpense = transactions
-    .filter((item) => item.type === "expense")
-    .reduce((total, item) => total + item.amount, 0);
+    .filter(
+      (transaction) =>
+        transaction.type === "expense"
+    )
+    .reduce(
+      (total, transaction) =>
+        total + transaction.amount,
+      0
+    );
 
-  const transactionRows = transactions
-    .map((transaction) => {
-      const sign =
-        transaction.type === "income" ? "+" : "-";
+  const netTotal =
+    totalIncome - totalExpense;
 
-      const time = new Date(
-        transaction.createdAt
-      ).toLocaleTimeString("tr-TR", {
-        hour: "2-digit",
-        minute: "2-digit",
-      });
+  const transactionRows =
+    transactions
+      .map((transaction) => {
+        const sign =
+          transaction.type ===
+          "income"
+            ? "+"
+            : "-";
 
-      return `
-        <div class="transaction">
-          <div class="transaction-top">
-            <span>${time}</span>
-            <strong>
-              ${sign}${formatMoney(transaction.amount)}
-            </strong>
+        const time = new Date(
+          transaction.createdAt
+        ).toLocaleTimeString(
+          "tr-TR",
+          {
+            hour: "2-digit",
+            minute: "2-digit",
+          }
+        );
+
+        return `
+          <div class="transaction">
+            <div class="transaction-top">
+              <span>${time}</span>
+
+              <strong>
+                ${sign}${formatMoney(
+                  transaction.amount
+                )}
+              </strong>
+            </div>
+
+            <div class="description">
+              ${escapeHtml(
+                transaction.description
+              )}
+            </div>
           </div>
-
-          <div class="description">
-            ${escapeHtml(transaction.description)}
-          </div>
-        </div>
-      `;
-    })
-    .join("");
+        `;
+      })
+      .join("");
 
   const printWindow = window.open(
     "",
     "_blank",
-    "width=420,height=700"
+    "width=480,height=760"
   );
 
   if (!printWindow) {
     window.alert(
-      "Yazdırma penceresi açılamadı. Açılır pencere izni verin."
+      "Fiş önizlemesi açılamadı. Açılır pencere izni verin."
     );
 
     return;
@@ -86,7 +122,7 @@ export function printDayEndReport({
 
         <meta
           name="viewport"
-          content="width=device-width, initial-scale=1"
+          content="width=device-width, initial-scale=1, viewport-fit=cover"
         />
 
         <title>REY KASA Gün Sonu</title>
@@ -103,24 +139,91 @@ export function printDayEndReport({
 
           html,
           body {
-            width: 74mm;
+            width: 100%;
             margin: 0;
             padding: 0;
           }
 
           body {
-            color: #000;
-            background: #fff;
+            color: #000000;
+            background: #ffffff;
+
             font-family:
               "Courier New",
               Courier,
               monospace;
+
             font-size: 11px;
             line-height: 1.35;
           }
 
+          .preview-actions {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+
+            width: calc(100% - 24px);
+            max-width: 420px;
+
+            margin: 12px auto;
+            padding: 10px;
+
+            border: 1px solid #e5e7eb;
+            border-radius: 16px;
+
+            background: rgba(
+              255,
+              255,
+              255,
+              0.96
+            );
+
+            display: grid;
+            grid-template-columns:
+              1fr 1fr;
+            gap: 8px;
+
+            box-shadow:
+              0 8px 24px
+              rgba(15, 23, 42, 0.1);
+
+            font-family:
+              -apple-system,
+              BlinkMacSystemFont,
+              "Segoe UI",
+              sans-serif;
+          }
+
+          .preview-actions button {
+            min-height: 48px;
+
+            border-radius: 13px;
+
+            font-size: 14px;
+            font-weight: 750;
+
+            cursor: pointer;
+          }
+
+          .preview-close {
+            border:
+              1px solid #d1d5db;
+
+            background: #f3f4f6;
+            color: #374151;
+          }
+
+          .preview-print {
+            border:
+              1px solid #c79a2b;
+
+            background: #c79a2b;
+            color: #ffffff;
+          }
+
           .receipt {
-            width: 100%;
+            width: 74mm;
+            margin: 0 auto;
           }
 
           .center {
@@ -129,36 +232,46 @@ export function printDayEndReport({
 
           .title {
             margin: 0;
+
             font-size: 19px;
             font-weight: 900;
           }
 
           .subtitle {
             margin: 3px 0 0;
+
             font-size: 12px;
             font-weight: 700;
           }
 
           .date {
             margin-top: 5px;
+
             font-size: 10px;
           }
 
           .divider {
             margin: 9px 0;
-            border-top: 1px dashed #000;
+
+            border-top:
+              1px dashed #000000;
           }
 
           .transaction {
             padding: 5px 0;
-            border-bottom: 1px dotted #777;
-            page-break-inside: avoid;
+
+            border-bottom:
+              1px dotted #777777;
+
+            page-break-inside:
+              avoid;
           }
 
           .transaction-top {
             display: flex;
             align-items: center;
-            justify-content: space-between;
+            justify-content:
+              space-between;
             gap: 8px;
           }
 
@@ -169,15 +282,19 @@ export function printDayEndReport({
 
           .description {
             margin-top: 2px;
+
             overflow-wrap: anywhere;
+
             font-size: 10px;
           }
 
           .summary-row {
             display: flex;
             align-items: center;
-            justify-content: space-between;
+            justify-content:
+              space-between;
             gap: 10px;
+
             margin: 4px 0;
           }
 
@@ -188,146 +305,150 @@ export function printDayEndReport({
           .total {
             margin-top: 7px;
             padding-top: 7px;
-            border-top: 2px solid #000;
+
+            border-top:
+              2px solid #000000;
+
             font-size: 13px;
             font-weight: 900;
           }
 
           .footer {
             margin-top: 12px;
+
             text-align: center;
             font-size: 10px;
           }
-          .preview-actions {
-  position: sticky;
-  top: 0;
-  z-index: 10;
 
-  width: 74mm;
-
-  margin-bottom: 12px;
-  padding: 10px;
-
-  border-bottom: 1px solid #ddd;
-
-  background: #ffffff;
-
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-
-  font-family:
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    sans-serif;
-}
-
-.preview-actions button {
-  min-height: 44px;
-
-  border-radius: 12px;
-
-  font-size: 14px;
-  font-weight: 700;
-
-  cursor: pointer;
-}
-
-.preview-close {
-  border: 1px solid #d1d5db;
-
-  background: #f3f4f6;
-  color: #374151;
-}
-
-.preview-print {
-  border: 1px solid #c79a2b;
-
-  background: #c79a2b;
-  color: #ffffff;
-}
           @media screen {
             body {
-              margin: 20px auto;
+              width: 100%;
+
+              padding-bottom: 30px;
+            }
+
+            .receipt {
+              margin: 0 auto;
             }
           }
 
           @media print {
-  .preview-actions {
-    display: none !important;
-  }
+            .preview-actions {
+              display: none !important;
+            }
 
-  html,
-  body {
-    width: 74mm;
-  }
-}
+            html,
+            body,
+            .receipt {
+              width: 74mm;
+              margin: 0;
+              padding: 0;
+            }
+          }
         </style>
       </head>
 
       <body>
-      <div class="preview-actions">
-  <button
-    type="button"
-    class="preview-close"
-    onclick="window.close()"
-  >
-    Geri Dön
-  </button>
+        <div class="preview-actions">
+          <button
+            type="button"
+            class="preview-close"
+            onclick="window.close()"
+          >
+            Geri Dön
+          </button>
 
-  <button
-    type="button"
-    class="preview-print"
-    onclick="window.print()"
-  >
-    Yazdır
-  </button>
-</div>
+          <button
+            type="button"
+            class="preview-print"
+            onclick="window.print()"
+          >
+            Yazdır
+          </button>
+        </div>
+
         <main class="receipt">
           <header class="center">
-            <h1 class="title">REY KASA</h1>
-            <p class="subtitle">GÜN SONU RAPORU</p>
+            <h1 class="title">
+              REY KASA
+            </h1>
+
+            <p class="subtitle">
+              GÜN SONU RAPORU
+            </p>
 
             <div class="date">
-              ${new Date().toLocaleString("tr-TR")}
+              ${new Date().toLocaleString(
+                "tr-TR"
+              )}
             </div>
           </header>
 
           <div class="divider"></div>
 
           <section>
-            ${transactionRows || "<p>Bugün işlem yok.</p>"}
+            ${
+              transactionRows ||
+              "<p class='center'>Bugün işlem yok.</p>"
+            }
           </section>
 
           <div class="divider"></div>
 
           <section>
             <div class="summary-row">
-              <span>Toplam Gelir</span>
-              <strong>${formatMoney(totalIncome)}</strong>
-            </div>
+              <span>
+                Toplam Gelir
+              </span>
 
-            <div class="summary-row">
-              <span>Toplam Gider</span>
-              <strong>${formatMoney(totalExpense)}</strong>
-            </div>
-
-            <div class="summary-row">
-              <span>Net Değişim</span>
               <strong>
-                ${formatMoney(totalIncome - totalExpense)}
+                ${formatMoney(
+                  totalIncome
+                )}
+              </strong>
+            </div>
+
+            <div class="summary-row">
+              <span>
+                Toplam Gider
+              </span>
+
+              <strong>
+                ${formatMoney(
+                  totalExpense
+                )}
+              </strong>
+            </div>
+
+            <div class="summary-row">
+              <span>
+                Net Değişim
+              </span>
+
+              <strong>
+                ${formatMoney(
+                  netTotal
+                )}
               </strong>
             </div>
 
             <div class="summary-row total">
-              <span>TOPLAM KASA</span>
-              <strong>${formatMoney(balance)}</strong>
+              <span>
+                TOPLAM KASA
+              </span>
+
+              <strong>
+                ${formatMoney(
+                  balance
+                )}
+              </strong>
             </div>
           </section>
 
           <footer class="footer">
-            Toplam ${transactions.length} işlem
+            Toplam
+            ${transactions.length}
+            işlem
           </footer>
         </main>
       </body>
