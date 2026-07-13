@@ -128,13 +128,27 @@ function SettingsPage({
   }
 
   function updateTheme(
-    theme: ThemeMode
-  ) {
-    updateSetting(
-      "theme",
-      theme
-    );
-  }
+  theme: ThemeMode
+) {
+  const updatedSettings: AppSettings = {
+    ...draft,
+    theme,
+  };
+
+  setDraft(updatedSettings);
+
+  void onSaveGeneralSettings(
+    updatedSettings
+  );
+
+  setSavedMessage(
+    theme === "dark"
+      ? "Koyu tema etkinleştirildi"
+      : theme === "light"
+        ? "Açık tema etkinleştirildi"
+        : "Otomatik tema etkinleştirildi"
+  );
+}
 
   async function handleAddDescription(
     event: FormEvent<HTMLFormElement>

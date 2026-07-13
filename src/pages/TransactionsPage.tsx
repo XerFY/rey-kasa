@@ -145,7 +145,7 @@ function TransactionsPage({
   const [
     dateFilter,
     setDateFilter,
-  ] = useState<DateFilter>("all");
+  ] = useState<DateFilter>("today");
 
   const [
     startDate,
@@ -272,14 +272,14 @@ function TransactionsPage({
   const filtersActive =
     searchText.trim() !== "" ||
     transactionFilter !== "all" ||
-    dateFilter !== "all" ||
+    dateFilter !== "today" ||
     startDate !== "" ||
     endDate !== "";
 
   function clearFilters() {
     setSearchText("");
     setTransactionFilter("all");
-    setDateFilter("all");
+    setDateFilter("today");
     setStartDate("");
     setEndDate("");
   }
