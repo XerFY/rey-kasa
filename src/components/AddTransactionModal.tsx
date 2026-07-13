@@ -123,25 +123,22 @@ function AddTransactionModal({
   }
 
   function handleQuickDescription(
-    item: QuickDescription
+  item: QuickDescription
+) {
+  setDescription(item.label);
+
+  if (
+    typeof item.amount === "number" &&
+    item.amount > 0
   ) {
-    setDescription(item.label);
-
-    if (
-      typeof item.amount ===
-        "number" &&
-      item.amount > 0
-    ) {
-      void onSave(
-        item.amount,
-        item.label
-      );
-
-      return;
-    }
-
-    setAmount("");
+    void onSave(
+      item.amount,
+      item.label
+    );
   }
+
+  // Kullanıcının yazdığı tutar artık silinmez.
+}
 
   function handleInputFocus() {
     window.setTimeout(() => {
