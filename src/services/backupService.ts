@@ -159,13 +159,10 @@ async function createBackup():
       })
     ) as DayEndRecord[];
 
-  const settings =
-    settingsSnapshot.exists()
-      ? (
-          settingsSnapshot.data()
-          as AppSettings
-        )
-      : defaultAppSettings;
+  const settings: AppSettings =
+  settingsSnapshot.exists()
+    ? (settingsSnapshot.data() as AppSettings)
+    : defaultAppSettings;
 
   return {
     application: "REY_KASA",
