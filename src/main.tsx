@@ -5,6 +5,7 @@ import "./styles/theme.css";
 import "./index.css";
 
 import App from "./App";
+import AppErrorBoundary from "./components/AppErrorBoundary";
 import { registerPWA } from "./pwa";
 
 const rootElement =
@@ -18,7 +19,9 @@ if (!rootElement) {
 
 createRoot(rootElement).render(
   <StrictMode>
-    <App />
+    <AppErrorBoundary>
+      <App />
+    </AppErrorBoundary>
   </StrictMode>
 );
 
@@ -32,9 +35,7 @@ function hideSplashScreen() {
       "app-splash"
     );
 
-  if (!splash) {
-    return;
-  }
+  if (!splash) return;
 
   window.setTimeout(() => {
     splash.classList.add(
@@ -48,8 +49,7 @@ function hideSplashScreen() {
 }
 
 if (
-  document.readyState ===
-  "complete"
+  document.readyState === "complete"
 ) {
   hideSplashScreen();
 } else {

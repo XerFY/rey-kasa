@@ -1,0 +1,136 @@
+.error-boundary {
+  width: 100%;
+  min-height: 100dvh;
+
+  padding:
+    calc(
+      24px +
+      env(safe-area-inset-top)
+    )
+    18px
+    calc(
+      24px +
+      env(safe-area-inset-bottom)
+    );
+
+  background:
+    radial-gradient(
+      circle at top,
+      var(--primary-soft),
+      transparent 38%
+    ),
+    var(--background);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.error-boundary-card {
+  width: 100%;
+  max-width: 410px;
+
+  padding: 28px 20px;
+
+  border: 1px solid var(--border);
+  border-radius: 25px;
+
+  background: var(--surface);
+  color: var(--text);
+
+  text-align: center;
+  box-shadow: var(--shadow);
+}
+
+.error-boundary-icon {
+  width: 65px;
+  height: 65px;
+
+  margin: 0 auto 14px;
+
+  border: 1px solid
+    color-mix(
+      in srgb,
+      var(--primary) 35%,
+      var(--border)
+    );
+
+  border-radius: 21px;
+
+  background: var(--primary-soft);
+  color: var(--primary);
+
+  display: grid;
+  place-items: center;
+}
+
+.error-boundary-card > span {
+  color: var(--primary);
+
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: 0.9px;
+}
+
+.error-boundary-card h1 {
+  margin-top: 5px;
+
+  color: var(--text);
+
+  font-size: 24px;
+  font-weight: 850;
+}
+
+.error-boundary-card p {
+  margin: 10px auto 20px;
+  max-width: 310px;
+
+  color: var(--text-secondary);
+
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.error-boundary-card button {
+  width: 100%;
+  min-height: 53px;
+
+  border-radius: 16px;
+
+  font-size: 14px;
+  font-weight: 850;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  cursor: pointer;
+}
+
+.error-reload {
+  border: 0;
+
+  background: var(--primary);
+  color: #ffffff;
+}
+
+.error-clear {
+  margin-top: 9px;
+
+  border: 1px solid var(--border);
+
+  background: var(--surface-soft);
+  color: var(--text-secondary);
+}
+
+.error-boundary-card small {
+  display: block;
+
+  margin-top: 15px;
+
+  color: var(--text-muted);
+
+  font-size: 10px;
+  line-height: 1.45;
+}
