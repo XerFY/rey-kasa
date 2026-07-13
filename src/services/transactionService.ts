@@ -1,6 +1,9 @@
-import { signInAnonymously } from "firebase/auth";
+import {
+  signInAnonymously,
+} from "firebase/auth";
 
 import {
+  addDoc,
   collection,
   deleteDoc,
   doc,
@@ -11,41 +14,52 @@ import {
   query,
   setDoc,
   updateDoc,
-  writeBatch,
   type DocumentData,
   type QueryDocumentSnapshot,
   type Unsubscribe,
 } from "firebase/firestore";
 
-import { auth, db } from "../firebase";
+import {
+  auth,
+  db,
+} from "../firebase";
 
 import type {
   AuditAction,
   AuditLog,
 } from "../types/AuditLog";
 
-import type { Transaction } from "../types/Transaction";
+import type {
+  Transaction,
+} from "../types/Transaction";
 
-const transactionsCollection = collection(
-  db,
-  "transactions"
-);
+const transactionsCollection =
+  collection(
+    db,
+    "transactions"
+  );
 
-const auditLogsCollection = collection(
-  db,
-  "auditLogs"
-);
+const auditLogsCollection =
+  collection(
+    db,
+    "auditLogs"
+  );
 
-async function ensureAuthenticated(): Promise<void> {
+async function ensureAuthenticated():
+  Promise<void> {
   if (!auth.currentUser) {
-    await signInAnonymously(auth);
+    await signInAnonymously(
+      auth
+    );
   }
 }
 
 function mapTransaction(
-  document: QueryDocumentSnapshot<DocumentData>
+  document:
+    QueryDocumentSnapshot<DocumentData>
 ): Transaction {
-  const data = document.data();
+  const data =
+    document.data();
 
   return {
     id: document.id,
@@ -56,35 +70,50 @@ function mapTransaction(
         : "income",
 
     amount:
-      typeof data.amount === "number"
+      typeof data.amount ===
+        "number"
         ? data.amount
         : 0,
 
     description:
-      typeof data.description === "string"
+      typeof data.description ===
+        "string"
         ? data.description
         : "",
 
     createdAt:
-      typeof data.createdAt === "number"
+      typeof data.createdAt ===
+        "number"
         ? data.createdAt
         : Date.now(),
   };
 }
 
-function createAuditDocument(
+async function writeAuditLog(
   action: AuditAction,
   transactionId: string,
   before: Transaction | null,
   after: Transaction | null
-) {
-  return {
-    action,
-    transactionId,
-    before,
-    after,
-    createdAt: Date.now(),
-  };
+): Promise<void> {
+  try {
+    await addDoc(
+      auditLogsCollection,
+      {
+        action,
+        transactionId,
+        before,
+        after,
+        createdAt: Date.now(),
+      }
+    );
+  } catch (error) {
+    // Geçmiş kaydı başarısız olsa bile
+    // asıl kasa işlemi iptal edilmez.
+    console.warn(
+      "İşlem geçmişi kaydedilemedi:",
+      error
+    );
+  }
 }
 
 async function readCachedTransaction(
@@ -93,14 +122,19 @@ async function readCachedTransaction(
   try {
     const snapshot =
       await getDocFromCache(
-        doc(db, "transactions", id)
+        doc(
+          db,
+          "transactions",
+          id
+        )
       );
 
     if (!snapshot.exists()) {
       return null;
     }
 
-    const data = snapshot.data();
+    const data =
+      snapshot.data();
 
     return {
       id: snapshot.id,
@@ -111,17 +145,20 @@ async function readCachedTransaction(
           : "income",
 
       amount:
-        typeof data.amount === "number"
+        typeof data.amount ===
+          "number"
           ? data.amount
           : 0,
 
       description:
-        typeof data.description === "string"
+        typeof data.description ===
+          "string"
           ? data.description
           : "",
 
       createdAt:
-        typeof data.createdAt === "number"
+        typeof data.createdAt ===
+          "number"
           ? data.createdAt
           : Date.now(),
     };
@@ -130,7 +167,8 @@ async function readCachedTransaction(
   }
 }
 
-export async function connectFirebase(): Promise<void> {
+export async function connectFirebase():
+  Promise<void> {
   await ensureAuthenticated();
 }
 
@@ -140,17 +178,24 @@ export function listenTransactions(
     hasPendingWrites: boolean
   ) => void,
 
-  onError: (error: Error) => void
+  onError: (
+    error: Error
+  ) => void
 ): Unsubscribe {
-  const transactionsQuery = query(
-    transactionsCollection,
-    orderBy("createdAt", "desc")
-  );
+  const transactionsQuery =
+    query(
+      transactionsCollection,
+      orderBy(
+        "createdAt",
+        "desc"
+      )
+    );
 
   return onSnapshot(
     transactionsQuery,
     {
-      includeMetadataChanges: true,
+      includeMetadataChanges:
+        true,
     },
     (snapshot) => {
       const transactions =
@@ -175,39 +220,38 @@ export function listenTransactions(
 }
 
 export async function createTransaction(
-  transaction: Omit<Transaction, "id">
+  transaction:
+    Omit<Transaction, "id">
 ): Promise<void> {
   await ensureAuthenticated();
 
   const transactionDocument =
-    doc(transactionsCollection);
+    doc(
+      transactionsCollection
+    );
 
-  const newTransaction: Transaction = {
-    id: transactionDocument.id,
-    ...transaction,
-  };
+  const newTransaction:
+    Transaction = {
+      id:
+        transactionDocument.id,
 
-  const auditDocument =
-    doc(auditLogsCollection);
+      ...transaction,
+    };
 
-  const batch = writeBatch(db);
-
-  batch.set(
+  // Önce asıl kasa kaydı yapılır.
+  await setDoc(
     transactionDocument,
     transaction
   );
 
-  batch.set(
-    auditDocument,
-    createAuditDocument(
-      "create",
-      transactionDocument.id,
-      null,
-      newTransaction
-    )
+  // Geçmiş kaydı kasa kaydını
+  // engellemeden ayrı gönderilir.
+  void writeAuditLog(
+    "create",
+    transactionDocument.id,
+    null,
+    newTransaction
   );
-
-  await batch.commit();
 }
 
 export async function updateTransaction(
@@ -215,7 +259,9 @@ export async function updateTransaction(
 
   changes: Pick<
     Transaction,
-    "type" | "amount" | "description"
+    | "type"
+    | "amount"
+    | "description"
   >,
 
   suppliedBefore?: Transaction
@@ -223,49 +269,58 @@ export async function updateTransaction(
   await ensureAuthenticated();
 
   const transactionDocument =
-    doc(db, "transactions", id);
+    doc(
+      db,
+      "transactions",
+      id
+    );
 
   const before =
     suppliedBefore ??
-    (await readCachedTransaction(id));
+    (
+      await readCachedTransaction(
+        id
+      )
+    );
 
-  const after: Transaction | null =
-    before
-      ? {
-          ...before,
-          type: changes.type,
-          amount: changes.amount,
-          description:
-            changes.description,
-        }
-      : null;
+  const after:
+    Transaction | null =
+      before
+        ? {
+            ...before,
 
-  const auditDocument =
-    doc(auditLogsCollection);
+            type:
+              changes.type,
 
-  const batch = writeBatch(db);
+            amount:
+              changes.amount,
 
-  batch.update(
+            description:
+              changes.description,
+          }
+        : null;
+
+  // Önce asıl işlem güncellenir.
+  await updateDoc(
     transactionDocument,
     {
-      type: changes.type,
-      amount: changes.amount,
+      type:
+        changes.type,
+
+      amount:
+        changes.amount,
+
       description:
         changes.description,
     }
   );
 
-  batch.set(
-    auditDocument,
-    createAuditDocument(
-      "update",
-      id,
-      before,
-      after
-    )
+  void writeAuditLog(
+    "update",
+    id,
+    before,
+    after
   );
-
-  await batch.commit();
 }
 
 export async function deleteTransaction(
@@ -275,32 +330,31 @@ export async function deleteTransaction(
   await ensureAuthenticated();
 
   const transactionDocument =
-    doc(db, "transactions", id);
+    doc(
+      db,
+      "transactions",
+      id
+    );
 
   const before =
     suppliedBefore ??
-    (await readCachedTransaction(id));
+    (
+      await readCachedTransaction(
+        id
+      )
+    );
 
-  const auditDocument =
-    doc(auditLogsCollection);
-
-  const batch = writeBatch(db);
-
-  batch.delete(
+  // Önce asıl işlem silinir.
+  await deleteDoc(
     transactionDocument
   );
 
-  batch.set(
-    auditDocument,
-    createAuditDocument(
-      "delete",
-      id,
-      before,
-      null
-    )
+  void writeAuditLog(
+    "delete",
+    id,
+    before,
+    null
   );
-
-  await batch.commit();
 
   return before;
 }
@@ -317,34 +371,30 @@ export async function restoreTransaction(
       transaction.id
     );
 
-  const auditDocument =
-    doc(auditLogsCollection);
-
-  const batch = writeBatch(db);
-
-  batch.set(
+  // Önce asıl işlem geri getirilir.
+  await setDoc(
     transactionDocument,
     {
-      type: transaction.type,
-      amount: transaction.amount,
+      type:
+        transaction.type,
+
+      amount:
+        transaction.amount,
+
       description:
         transaction.description,
+
       createdAt:
         transaction.createdAt,
     }
   );
 
-  batch.set(
-    auditDocument,
-    createAuditDocument(
-      "restore",
-      transaction.id,
-      null,
-      transaction
-    )
+  void writeAuditLog(
+    "restore",
+    transaction.id,
+    null,
+    transaction
   );
-
-  await batch.commit();
 }
 
 export function listenAuditLogs(
@@ -352,15 +402,25 @@ export function listenAuditLogs(
     logs: AuditLog[]
   ) => void,
 
-  onError: (error: Error) => void,
+  onError: (
+    error: Error
+  ) => void,
 
   maximumRecordCount = 100
 ): Unsubscribe {
-  const auditQuery = query(
-    auditLogsCollection,
-    orderBy("createdAt", "desc"),
-    limit(maximumRecordCount)
-  );
+  const auditQuery =
+    query(
+      auditLogsCollection,
+
+      orderBy(
+        "createdAt",
+        "desc"
+      ),
+
+      limit(
+        maximumRecordCount
+      )
+    );
 
   return onSnapshot(
     auditQuery,
@@ -371,23 +431,36 @@ export function listenAuditLogs(
             const data =
               document.data();
 
-            return {
-              id: document.id,
+            const action:
+              AuditAction =
+                data.action ===
+                  "update" ||
+                data.action ===
+                  "delete" ||
+                data.action ===
+                  "restore"
+                  ? data.action
+                  : "create";
 
-              action:
-                data.action as AuditAction,
+            return {
+              id:
+                document.id,
+
+              action,
 
               transactionId:
                 typeof data.transactionId ===
-                "string"
+                  "string"
                   ? data.transactionId
                   : "",
 
               before:
-                data.before ?? null,
+                data.before ??
+                null,
 
               after:
-                data.after ?? null,
+                data.after ??
+                null,
 
               createdAt:
                 typeof data.createdAt ===
@@ -401,59 +474,5 @@ export function listenAuditLogs(
       onData(logs);
     },
     onError
-  );
-}
-
-export async function permanentlyDeleteAuditLog(
-  id: string
-): Promise<void> {
-  await ensureAuthenticated();
-
-  await deleteDoc(
-    doc(db, "auditLogs", id)
-  );
-}
-
-export async function saveTransactionDirectly(
-  transaction: Transaction
-): Promise<void> {
-  await ensureAuthenticated();
-
-  await setDoc(
-    doc(
-      db,
-      "transactions",
-      transaction.id
-    ),
-    {
-      type: transaction.type,
-      amount: transaction.amount,
-      description:
-        transaction.description,
-      createdAt:
-        transaction.createdAt,
-    }
-  );
-}
-
-export async function updateTransactionDirectly(
-  transaction: Transaction
-): Promise<void> {
-  await ensureAuthenticated();
-
-  await updateDoc(
-    doc(
-      db,
-      "transactions",
-      transaction.id
-    ),
-    {
-      type: transaction.type,
-      amount: transaction.amount,
-      description:
-        transaction.description,
-      createdAt:
-        transaction.createdAt,
-    }
   );
 }
