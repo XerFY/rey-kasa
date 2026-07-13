@@ -18,7 +18,7 @@ import {
 } from "react";
 
 import "../styles/SettingsPage.css";
-
+import BackupManager from "../components/BackupManager";
 import AuditHistory from "../components/AuditHistory";
 import OpeningBalanceCard from "../components/OpeningBalanceCard";
 
@@ -944,7 +944,7 @@ function SettingsPage({
           </div>
         )}
       </article>
-
+      <BackupManager />
       <AuditHistory />
     </section>
   );
