@@ -61,6 +61,9 @@ function isThemeMode(
   return (
     value === "light" ||
     value === "dark" ||
+    value === "emerald" ||
+    value === "midnight" ||
+    value === "burgundy" ||
     value === "system"
   );
 }

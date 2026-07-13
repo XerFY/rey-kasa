@@ -7,31 +7,28 @@ export type QuickDescription = {
   type: QuickDescriptionType;
   label: string;
 
-  // Tutar girilmişse tek dokunuşla
-  // işlem kaydedilir.
+  // Tutar girilmişse tek dokunuşla işlem kaydedilir.
   amount?: number;
 };
 
 export type ThemeMode =
   | "light"
   | "dark"
+  | "emerald"
+  | "midnight"
+  | "burgundy"
   | "system";
 
 export type PrinterSettings = {
   enabled: boolean;
-
   ipAddress: string;
   port: number;
-
   autoPrintDayEnd: boolean;
-
   charactersPerLine: number;
 };
 
 export type AppSettings = {
-  quickDescriptions:
-    QuickDescription[];
-
+  quickDescriptions: QuickDescription[];
   openingBalance: number;
 
   businessName: string;
@@ -43,11 +40,8 @@ export type AppSettings = {
   dayEndReminderEnabled: boolean;
   dayEndReminderTime: string;
 
-  largeTransactionWarningEnabled:
-    boolean;
-
-  largeTransactionThreshold:
-    number;
+  largeTransactionWarningEnabled: boolean;
+  largeTransactionThreshold: number;
 
   printer: PrinterSettings;
 };
@@ -55,40 +49,28 @@ export type AppSettings = {
 export const defaultPrinterSettings:
   PrinterSettings = {
     enabled: false,
-
     ipAddress: "",
     port: 9100,
-
     autoPrintDayEnd: false,
-
     charactersPerLine: 48,
   };
 
 export const defaultAppSettings:
   AppSettings = {
     quickDescriptions: [],
-
     openingBalance: 0,
 
     businessName: "REY KASA",
     businessPhone: "",
-    receiptFooter:
-      "İyi çalışmalar",
+    receiptFooter: "İyi çalışmalar",
 
     theme: "light",
 
-    dayEndReminderEnabled:
-      false,
+    dayEndReminderEnabled: false,
+    dayEndReminderTime: "20:00",
 
-    dayEndReminderTime:
-      "20:00",
+    largeTransactionWarningEnabled: true,
+    largeTransactionThreshold: 50000,
 
-    largeTransactionWarningEnabled:
-      true,
-
-    largeTransactionThreshold:
-      50000,
-
-    printer:
-      defaultPrinterSettings,
+    printer: defaultPrinterSettings,
   };

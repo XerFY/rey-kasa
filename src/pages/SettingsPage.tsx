@@ -2,7 +2,6 @@ import {
   Bell,
   Building2,
   MessageSquareText,
-  Moon,
   Plus,
   Printer,
   Save,
@@ -20,9 +19,7 @@ import {
 import "../styles/SettingsPage.css";
 import BackupManager from "../components/BackupManager";
 import AuditHistory from "../components/AuditHistory";
-import OpeningBalanceCard from "../components/OpeningBalanceCard";
-
-import type {
+import OpeningBalanceCard from "../components/OpeningBalanceCard";import type {
   AppSettings,
   QuickDescription,
   QuickDescriptionType,
@@ -130,10 +127,21 @@ function SettingsPage({
   function updateTheme(
   theme: ThemeMode
 ) {
-  const updatedSettings: AppSettings = {
-    ...draft,
-    theme,
-  };
+  const themeNames:
+    Record<ThemeMode, string> = {
+      light: "Açık İnci",
+      dark: "Koyu Grafit",
+      emerald: "Zümrüt Altın",
+      midnight: "Safir Gece",
+      burgundy: "Bordo Altın",
+      system: "Otomatik",
+    };
+
+  const updatedSettings:
+    AppSettings = {
+      ...draft,
+      theme,
+    };
 
   setDraft(updatedSettings);
 
@@ -142,11 +150,7 @@ function SettingsPage({
   );
 
   setSavedMessage(
-    theme === "dark"
-      ? "Koyu tema etkinleştirildi"
-      : theme === "light"
-        ? "Açık tema etkinleştirildi"
-        : "Otomatik tema etkinleştirildi"
+    `${themeNames[theme]} teması etkinleştirildi`
   );
 }
 
@@ -464,53 +468,100 @@ function SettingsPage({
           </div>
 
           <div className="theme-selector">
-            <button
-              type="button"
-              className={
-                draft.theme === "light"
-                  ? "active"
-                  : ""
-              }
-              onClick={() =>
-                updateTheme("light")
-              }
-            >
-              <Sun size={18} />
-              Açık
-            </button>
+  <button
+    type="button"
+    className={
+      draft.theme === "light"
+        ? "active"
+        : ""
+    }
+    onClick={() =>
+      updateTheme("light")
+    }
+    disabled={saving}
+  >
+    Açık İnci
+  </button>
 
-            <button
-              type="button"
-              className={
-                draft.theme === "dark"
-                  ? "active"
-                  : ""
-              }
-              onClick={() =>
-                updateTheme("dark")
-              }
-            >
-              <Moon size={18} />
-              Koyu
-            </button>
+  <button
+    type="button"
+    className={
+      draft.theme === "dark"
+        ? "active"
+        : ""
+    }
+    onClick={() =>
+      updateTheme("dark")
+    }
+    disabled={saving}
+  >
+    Koyu Grafit
+  </button>
 
-            <button
-              type="button"
-              className={
-                draft.theme === "system"
-                  ? "active"
-                  : ""
-              }
-              onClick={() =>
-                updateTheme("system")
-              }
-            >
-              Otomatik
-            </button>
-          </div>
-        </article>
+  <button
+    type="button"
+    className={
+      draft.theme === "emerald"
+        ? "active"
+        : ""
+    }
+    onClick={() =>
+      updateTheme("emerald")
+    }
+    disabled={saving}
+  >
+    Zümrüt Altın
+  </button>
 
-        <article className="settings-card">
+  <button
+    type="button"
+    className={
+      draft.theme === "midnight"
+        ? "active"
+        : ""
+    }
+    onClick={() =>
+      updateTheme("midnight")
+    }
+    disabled={saving}
+  >
+    Safir Gece
+  </button>
+
+  <button
+    type="button"
+    className={
+      draft.theme === "burgundy"
+        ? "active"
+        : ""
+    }
+    onClick={() =>
+      updateTheme("burgundy")
+    }
+    disabled={saving}
+  >
+    Bordo Altın
+  </button>
+
+  <button
+    type="button"
+    className={
+      draft.theme === "system"
+        ? "active"
+        : ""
+    }
+    onClick={() =>
+      updateTheme("system")
+    }
+    disabled={saving}
+  >
+    Otomatik
+    </button>
+</div>
+
+</article>
+
+<article className="settings-card">
           <div className="settings-card-title">
             <div className="settings-card-icon">
               <Bell size={22} />

@@ -8,6 +8,8 @@ import App from "./App";
 import AppErrorBoundary from "./components/AppErrorBoundary";
 import { registerPWA } from "./pwa";
 
+import "./styles/PremiumPolish.css";
+
 const rootElement =
   document.getElementById("root");
 

@@ -1,0 +1,515 @@
+/* REY KASA - ortak premium görünüm ve mobil güvenlik katmanı */
+
+body {
+  background:
+    radial-gradient(
+      110% 58% at 50% -8%,
+      var(--primary-soft),
+      transparent 66%
+    ),
+    var(--background);
+}
+
+.app {
+  min-height: 100vh;
+  min-height: 100dvh;
+
+  padding-right:
+    max(18px, env(safe-area-inset-right));
+
+  padding-left:
+    max(18px, env(safe-area-inset-left));
+}
+
+.sync-status,
+.connection-status {
+  border-color:
+    color-mix(
+      in srgb,
+      var(--success) 28%,
+      var(--border)
+    );
+
+  background:
+    color-mix(
+      in srgb,
+      var(--success) 9%,
+      var(--surface)
+    );
+
+  box-shadow: var(--shadow-sm);
+}
+
+:is(
+  .balance-card,
+  .transaction-item,
+  .daily-summary article,
+  .report-card,
+  .settings-card,
+  .history-card,
+  .monthly-chart-card,
+  .opening-balance-card,
+  .audit-item,
+  .backup-manager
+) {
+  border-color: var(--border);
+  background-color: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.settings-card + .settings-card {
+  margin-top: 16px;
+}
+
+.balance-card {
+  box-shadow:
+    var(--shadow-md),
+    inset 0 1px 0
+    color-mix(
+      in srgb,
+      var(--surface-elevated) 80%,
+      transparent
+    );
+}
+
+.transaction-item {
+  transition:
+    transform 0.16s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.buttons button,
+.day-end,
+.report-period-selector button,
+.filter-button,
+.settings-card button,
+.report-export-actions button {
+  transition:
+    transform 0.16s ease,
+    filter 0.16s ease,
+    box-shadow 0.2s ease;
+}
+
+.buttons button,
+.day-end {
+  box-shadow: var(--shadow-sm);
+}
+
+:is(
+  .day-end,
+  .error-reload,
+  .backup-download,
+  .backup-confirmation-confirm,
+  .adjustment-continue,
+  .adjustment-confirm,
+  .day-reminder-open,
+  .day-end-finish,
+  .day-end-archive,
+  .closed-day-confirm-edit,
+  .history-print,
+  .large-warning-confirm,
+  .report-export-pdf,
+  .report-period-selector button.active,
+  .opening-balance-form > button,
+  .save-all-settings
+) {
+  color: var(--on-primary);
+}
+
+:is(
+  .buttons button,
+  .day-end,
+  .report-period-selector button,
+  .filter-button,
+  .settings-card button,
+  .report-export-actions button
+):active {
+  transform: scale(0.97);
+}
+
+/* Alt menü */
+
+.bottom-navigation {
+  padding-right:
+    max(10px, env(safe-area-inset-right));
+
+  padding-left:
+    max(10px, env(safe-area-inset-left));
+
+  border:
+    1px solid
+    color-mix(
+      in srgb,
+      var(--border) 88%,
+      transparent
+    );
+
+  border-bottom: 0;
+  border-radius: 22px 22px 0 0;
+
+  box-shadow:
+    0 -14px 44px
+    color-mix(
+      in srgb,
+      var(--text) 10%,
+      transparent
+    );
+}
+
+.bottom-navigation-item {
+  min-height: 54px;
+}
+
+.bottom-navigation-item.active {
+  box-shadow:
+    inset 0 0 0 1px
+    color-mix(
+      in srgb,
+      var(--primary) 18%,
+      transparent
+    );
+}
+
+/* Dokunma alanları */
+
+:is(
+  .transaction-menu-button,
+  .transaction-search-clear,
+  .modal-close,
+  .edit-close,
+  .day-end-close,
+  .adjustment-close,
+  .delete-close,
+  .large-warning-close,
+  .closed-day-close,
+  .backup-confirmation-close,
+  .undo-toast-close,
+  .day-reminder-close
+) {
+  min-width: 44px;
+  width: 44px;
+  min-height: 44px;
+  height: 44px;
+}
+
+.transaction-menu button,
+.quick-description-button,
+.undo-toast-action,
+.day-reminder-open,
+.history-filter > button {
+  min-height: 44px;
+}
+
+/* Modal katmanları */
+
+:is(
+  .modal-overlay,
+  .edit-overlay,
+  .day-end-overlay,
+  .adjustment-overlay,
+  .delete-overlay,
+  .large-warning-overlay,
+  .closed-day-overlay
+) {
+  background: var(--overlay);
+}
+
+:is(
+  .modal-overlay,
+  .edit-overlay,
+  .day-end-overlay
+) {
+  padding-top:
+    calc(8px + env(safe-area-inset-top));
+
+  padding-right:
+    env(safe-area-inset-right);
+
+  padding-left:
+    env(safe-area-inset-left);
+}
+
+:is(
+  .modal-sheet,
+  .edit-sheet,
+  .day-end-modal
+) {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-modal);
+}
+
+.day-end-modal {
+  max-height: 100%;
+}
+
+:is(
+  .delete-overlay,
+  .adjustment-overlay,
+  .large-warning-overlay,
+  .closed-day-overlay
+) {
+  overflow-y: auto;
+
+  padding:
+    calc(12px + env(safe-area-inset-top))
+    calc(12px + env(safe-area-inset-right))
+    calc(12px + env(safe-area-inset-bottom))
+    calc(12px + env(safe-area-inset-left));
+}
+
+:is(
+  .delete-modal,
+  .adjustment-modal,
+  .large-warning-modal,
+  .closed-day-warning
+) {
+  max-height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-modal);
+}
+
+.day-end-modal .positive {
+  color: var(--success);
+}
+
+.day-end-modal .negative {
+  color: var(--danger);
+}
+
+/* Bildirimler modalların üstüne çıkmaz */
+
+.day-reminder-banner {
+  z-index: 1000;
+  box-shadow: var(--shadow-lg);
+}
+
+.undo-toast {
+  z-index: 1010;
+  box-shadow: var(--shadow-lg);
+}
+
+body:has(.undo-toast) .day-reminder-banner {
+  bottom:
+    calc(
+      156px +
+      env(safe-area-inset-bottom)
+    );
+}
+
+/* iPhone tarih alanları */
+
+:is(
+  .custom-date-area,
+  .history-filter
+) {
+  min-width: 0;
+  max-width: 100%;
+  overflow: visible;
+}
+
+:is(
+  .custom-date-area,
+  .history-filter
+) > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+:is(
+  .custom-date-area,
+  .history-filter
+) input[type="date"] {
+  box-sizing: border-box;
+
+  inline-size: 100%;
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  min-height: 48px;
+
+  overflow: hidden;
+
+  border: 1px solid var(--border);
+  border-radius: 16px !important;
+
+  background: var(--surface-soft);
+  background-clip: padding-box;
+  color: var(--text);
+
+  font: inherit;
+  font-size: 16px;
+  line-height: 1.2;
+
+  -webkit-appearance: none;
+  appearance: none;
+
+  clip-path: inset(0 round 16px);
+}
+
+:is(
+  .custom-date-area,
+  .history-filter
+) input[type="date"]::-webkit-date-and-time-value {
+  min-height: 24px;
+  margin: 0;
+
+  color: var(--text);
+  font: inherit;
+  line-height: 24px;
+  text-align: center;
+}
+
+:is(
+  .custom-date-area,
+  .history-filter
+) input[type="date"]::-webkit-datetime-edit {
+  min-width: 0;
+  padding: 0;
+}
+
+:is(
+  .custom-date-area,
+  .history-filter
+) input[type="date"]:focus {
+  border-color: var(--primary);
+  outline: 0;
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+/* Ayarlar formu */
+
+.description-form {
+  grid-template-columns:
+    minmax(0, 1fr)
+    minmax(120px, 0.65fr)
+    auto;
+}
+
+/* Grafik */
+
+.monthly-chart-scroll {
+  scrollbar-width: none;
+}
+
+.monthly-chart-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* Para değerlerinin rakamları hizalı görünür */
+
+:is(
+  .balance-top h2,
+  .transaction-item strong,
+  .daily-summary strong,
+  .report-card > strong,
+  .summary-card strong,
+  .history-card strong,
+  .opening-balance-saved strong
+) {
+  font-variant-numeric:
+    tabular-nums lining-nums;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .transaction-item:hover {
+    transform: translateY(-2px);
+
+    border-color:
+      color-mix(
+        in srgb,
+        var(--primary) 26%,
+        var(--border)
+      );
+
+    box-shadow: var(--shadow-md);
+  }
+
+  :is(
+    .buttons button,
+    .day-end,
+    .report-period-selector button,
+    .filter-button,
+    .settings-card button,
+    .report-export-actions button
+  ):hover:not(:disabled) {
+    filter: brightness(1.035);
+  }
+}
+
+@media (max-width: 520px) {
+  .custom-date-area,
+  .history-filter {
+    grid-template-columns:
+      minmax(0, 1fr);
+  }
+
+  .description-form {
+    grid-template-columns:
+      minmax(0, 1fr)
+      auto;
+  }
+
+  .description-form > :first-child {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 360px) {
+  .description-form {
+    grid-template-columns:
+      minmax(0, 1fr);
+  }
+
+  .description-form > * {
+    grid-column: 1;
+  }
+}
+#app-splash {
+  background:
+    radial-gradient(
+      circle at center,
+      var(--primary-soft),
+      transparent 42%
+    ),
+    var(--background) !important;
+}
+
+.splash-logo {
+  border-color:
+    color-mix(
+      in srgb,
+      var(--primary) 34%,
+      var(--border)
+    ) !important;
+
+  background:
+    var(--surface) !important;
+
+  color:
+    var(--primary) !important;
+
+  box-shadow:
+    var(--shadow-md) !important;
+}
+
+.splash-title {
+  color: var(--text) !important;
+}
+
+.splash-subtitle {
+  color:
+    var(--text-secondary) !important;
+}
+
+.splash-loader {
+  background:
+    var(--primary-soft) !important;
+}
+
+.splash-loader::after {
+  background:
+    var(--primary) !important;
+}

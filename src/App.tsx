@@ -225,7 +225,10 @@ function App() {
     setSyncError,
   ] = useState("");
 
-  useAppTheme(settings.theme);
+  useAppTheme(
+  settings.theme,
+  settingsLoading
+);
 useEffect(() => {
   try {
     localStorage.setItem(
