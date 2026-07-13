@@ -226,7 +226,28 @@ function App() {
   ] = useState("");
 
   useAppTheme(settings.theme);
-
+useEffect(() => {
+  try {
+    localStorage.setItem(
+      "rey-kasa-receipt-settings",
+      JSON.stringify({
+        businessName:
+          settings.businessName,
+        businessPhone:
+          settings.businessPhone,
+        receiptFooter:
+          settings.receiptFooter,
+      })
+    );
+  } catch {
+    // Depolama kullanılamazsa
+    // varsayılan fiş bilgileri kullanılır.
+  }
+}, [
+  settings.businessName,
+  settings.businessPhone,
+  settings.receiptFooter,
+]);
   const {
     showReminder,
     dismissReminder,

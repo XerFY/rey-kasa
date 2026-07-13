@@ -4,7 +4,61 @@ type PrintDayEndParams = {
   transactions: Transaction[];
   balance: number;
 };
+type ReceiptSettings = {
+  businessName: string;
+  businessPhone: string;
+  receiptFooter: string;
+};
 
+function readReceiptSettings():
+  ReceiptSettings {
+  const fallback: ReceiptSettings = {
+    businessName: "REY KASA",
+    businessPhone: "",
+    receiptFooter:
+      "İyi çalışmalar",
+  };
+
+  try {
+    const stored =
+      localStorage.getItem(
+        "rey-kasa-receipt-settings"
+      );
+
+    if (!stored) {
+      return fallback;
+    }
+
+    const parsed =
+      JSON.parse(stored) as Partial<
+        ReceiptSettings
+      >;
+
+    return {
+      businessName:
+        typeof parsed.businessName ===
+          "string" &&
+        parsed.businessName.trim()
+          ? parsed.businessName.trim()
+          : fallback.businessName,
+
+      businessPhone:
+        typeof parsed.businessPhone ===
+        "string"
+          ? parsed.businessPhone.trim()
+          : "",
+
+      receiptFooter:
+        typeof parsed.receiptFooter ===
+          "string" &&
+        parsed.receiptFooter.trim()
+          ? parsed.receiptFooter.trim()
+          : fallback.receiptFooter,
+    };
+  } catch {
+    return fallback;
+  }
+}
 function formatMoney(
   amount: number
 ): string {
@@ -27,8 +81,25 @@ function escapeHtml(
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
 }
+const receiptSettings =
+  readReceiptSettings();
 
+const businessName =
+  escapeHtml(
+    receiptSettings.businessName
+  );
+
+const businessPhone =
+  escapeHtml(
+    receiptSettings.businessPhone
+  );
+
+const receiptFooter =
+  escapeHtml(
+    receiptSettings.receiptFooter
+  );
 export function printDayEndReport({
+  
   transactions,
   balance,
 }: PrintDayEndParams): void {
@@ -378,8 +449,18 @@ export function printDayEndReport({
         <main class="receipt">
           <header class="center">
             <h1 class="title">
-              REY KASA
-            </h1>
+  ${businessName}
+</h1>
+
+${
+  businessPhone
+    ? `
+      <div class="date">
+        ${businessPhone}
+      </div>
+    `
+    : ""
+}
 
             <p class="subtitle">
               GÜN SONU RAPORU
@@ -454,10 +535,16 @@ export function printDayEndReport({
           </section>
 
           <footer class="footer">
-            Toplam
-            ${transactions.length}
-            işlem
-          </footer>
+  <div>
+    Toplam
+    ${transactions.length}
+    işlem
+  </div>
+
+  <div style="margin-top: 7px; font-weight: 700;">
+    ${receiptFooter}
+  </div>
+</footer>
         </main>
       </body>
     </html>
