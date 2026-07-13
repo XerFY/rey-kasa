@@ -1,9 +1,17 @@
 import {
   useEffect,
+  useRef,
   useState,
   type FormEvent,
 } from "react";
-import { X } from "lucide-react";
+
+import {
+  ArrowDownRight,
+  ArrowUpRight,
+  CircleCheck,
+  PencilLine,
+  X,
+} from "lucide-react";
 
 import "../styles/EditTransactionModal.css";
 
@@ -38,30 +46,76 @@ function EditTransactionModal({
   const [description, setDescription] =
     useState("");
 
+  const [validationError, setValidationError] =
+    useState("");
+
+  const sheetRef =
+    useRef<HTMLElement>(null);
+
   useEffect(() => {
-    if (!open || !transaction) {
-      return;
-    }
+    if (!open || !transaction) return;
 
     setType(transaction.type);
     setAmount(String(transaction.amount));
     setDescription(transaction.description);
+    setValidationError("");
   }, [open, transaction]);
 
   useEffect(() => {
-    if (!open) {
-      return;
-    }
+    if (!open) return;
 
     const previousOverflow =
       document.body.style.overflow;
 
-    document.body.style.overflow =
-      "hidden";
+    document.body.style.overflow = "hidden";
+
+    function updateKeyboardHeight() {
+      const viewport =
+        window.visualViewport;
+
+      if (!viewport) return;
+
+      const keyboardHeight =
+        window.innerHeight -
+        viewport.height -
+        viewport.offsetTop;
+
+      document.documentElement.style.setProperty(
+        "--edit-keyboard-height",
+        `${Math.max(0, keyboardHeight)}px`
+      );
+    }
+
+    updateKeyboardHeight();
+
+    window.visualViewport?.addEventListener(
+      "resize",
+      updateKeyboardHeight
+    );
+
+    window.visualViewport?.addEventListener(
+      "scroll",
+      updateKeyboardHeight
+    );
 
     return () => {
       document.body.style.overflow =
         previousOverflow;
+
+      document.documentElement.style.setProperty(
+        "--edit-keyboard-height",
+        "0px"
+      );
+
+      window.visualViewport?.removeEventListener(
+        "resize",
+        updateKeyboardHeight
+      );
+
+      window.visualViewport?.removeEventListener(
+        "scroll",
+        updateKeyboardHeight
+      );
     };
   }, [open]);
 
@@ -69,13 +123,20 @@ function EditTransactionModal({
     return null;
   }
 
-  const currentTransaction =
-    transaction;
+  const currentTransaction = transaction;
+
+  function handleClose() {
+    if (!saving) {
+      onClose();
+    }
+  }
 
   async function handleSubmit(
     event: FormEvent<HTMLFormElement>
   ) {
     event.preventDefault();
+
+    if (saving) return;
 
     const normalizedAmount = amount
       .replace(/\./g, "")
@@ -88,8 +149,14 @@ function EditTransactionModal({
       !Number.isFinite(numericAmount) ||
       numericAmount <= 0
     ) {
+      setValidationError(
+        "Geçerli bir tutar gir."
+      );
+
       return;
     }
+
+    setValidationError("");
 
     await onSave(
       currentTransaction.id,
@@ -102,13 +169,23 @@ function EditTransactionModal({
     );
   }
 
+  function handleInputFocus() {
+    window.setTimeout(() => {
+      sheetRef.current?.scrollTo({
+        top: sheetRef.current.scrollHeight,
+        behavior: "smooth",
+      });
+    }, 250);
+  }
+
   return (
     <div
       className="edit-overlay"
-      onClick={onClose}
+      onClick={handleClose}
     >
       <section
-        className="edit-sheet"
+        ref={sheetRef}
+        className={`edit-sheet edit-sheet-${type}`}
         onClick={(event) =>
           event.stopPropagation()
         }
@@ -116,21 +193,36 @@ function EditTransactionModal({
         <div className="edit-handle" />
 
         <header className="edit-header">
-          <div>
-            <span>İşlem Kaydı</span>
-            <h2>İşlemi Düzenle</h2>
+          <div className="edit-header-main">
+            <div className="edit-header-icon">
+              <PencilLine size={21} />
+            </div>
+
+            <div>
+              <span>İŞLEM KAYDI</span>
+              <h2>İşlemi Düzenle</h2>
+            </div>
           </div>
 
           <button
             type="button"
             className="edit-close"
-            onClick={onClose}
+            onClick={handleClose}
             disabled={saving}
             aria-label="Kapat"
           >
             <X size={20} />
           </button>
         </header>
+
+        <div className="edit-information">
+          <CircleCheck size={17} />
+
+          <span>
+            Kaydettiğinde kasa ve raporlar
+            otomatik güncellenecek.
+          </span>
+        </div>
 
         <form onSubmit={handleSubmit}>
           <label className="edit-label">
@@ -145,11 +237,21 @@ function EditTransactionModal({
                   ? "selected-income"
                   : ""
               }
-              onClick={() =>
-                setType("income")
+              onClick={() => {
+                setType("income");
+                setValidationError("");
+              }}
+              disabled={saving}
+              aria-pressed={
+                type === "income"
               }
             >
-              Gelir
+              <ArrowUpRight size={20} />
+
+              <span>
+                <strong>Gelir</strong>
+                <small>Para girişi</small>
+              </span>
             </button>
 
             <button
@@ -159,11 +261,21 @@ function EditTransactionModal({
                   ? "selected-expense"
                   : ""
               }
-              onClick={() =>
-                setType("expense")
+              onClick={() => {
+                setType("expense");
+                setValidationError("");
+              }}
+              disabled={saving}
+              aria-pressed={
+                type === "expense"
               }
             >
-              Gider
+              <ArrowDownRight size={20} />
+
+              <span>
+                <strong>Gider</strong>
+                <small>Para çıkışı</small>
+              </span>
             </button>
           </div>
 
@@ -182,12 +294,17 @@ function EditTransactionModal({
               type="text"
               inputMode="decimal"
               value={amount}
-              onChange={(event) =>
+              onChange={(event) => {
                 setAmount(
                   event.target.value
-                )
-              }
+                );
+
+                setValidationError("");
+              }}
+              onFocus={handleInputFocus}
+              placeholder="0,00"
               autoComplete="off"
+              disabled={saving}
             />
           </div>
 
@@ -208,16 +325,27 @@ function EditTransactionModal({
                 event.target.value
               )
             }
+            onFocus={handleInputFocus}
+            placeholder="İşlem açıklaması"
             maxLength={80}
             autoComplete="off"
+            disabled={saving}
           />
+
+          {validationError && (
+            <div className="edit-error">
+              {validationError}
+            </div>
+          )}
 
           <div className="edit-actions">
             <button
               type="submit"
-              className="edit-save"
+              className={`edit-save edit-save-${type}`}
               disabled={saving}
             >
+              <PencilLine size={19} />
+
               {saving
                 ? "Kaydediliyor..."
                 : "Değişiklikleri Kaydet"}
@@ -226,7 +354,7 @@ function EditTransactionModal({
             <button
               type="button"
               className="edit-cancel"
-              onClick={onClose}
+              onClick={handleClose}
               disabled={saving}
             >
               Vazgeç

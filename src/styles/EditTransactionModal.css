@@ -2,34 +2,66 @@
   position: fixed;
   inset: 0;
   z-index: 1300;
+
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  background: rgba(15, 23, 42, 0.58);
-  backdrop-filter: blur(9px);
-  -webkit-backdrop-filter: blur(9px);
+
+  background: rgba(15, 23, 42, 0.62);
+
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 .edit-sheet {
   width: 100%;
   max-width: 520px;
-  max-height: 94dvh;
+
+  max-height: calc(
+    100dvh -
+    var(--edit-keyboard-height, 0px) -
+    8px
+  );
+
   overflow-y: auto;
-  padding: 10px 18px calc(20px + env(safe-area-inset-bottom));
+  overscroll-behavior: contain;
+
+  padding:
+    10px
+    18px
+    calc(
+      20px +
+      env(safe-area-inset-bottom)
+    );
+
   border: 1px solid var(--border);
   border-bottom: 0;
-  border-radius: 28px 28px 0 0;
+  border-radius: 30px 30px 0 0;
+
   background: var(--background);
   color: var(--text);
-  box-shadow: 0 -24px 70px rgba(15, 23, 42, 0.22);
-  animation: edit-sheet-open 0.24s ease;
+
+  box-shadow:
+    0 -25px 70px
+    rgba(15, 23, 42, 0.28);
+
+  animation:
+    edit-sheet-open
+    0.25s
+    ease;
+
+  -webkit-overflow-scrolling: touch;
+  scroll-padding-bottom: 150px;
 }
 
 .edit-handle {
-  width: 44px;
+  width: 45px;
   height: 5px;
-  margin: 0 auto 17px;
+
+  margin: 0 auto 18px;
+
   border-radius: 999px;
+
   background: var(--border);
 }
 
@@ -38,150 +70,391 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 20px;
+
+  margin-bottom: 18px;
 }
 
-.edit-header span {
-  color: var(--text-secondary);
-  font-size: 12px;
-  font-weight: 700;
+.edit-header-main {
+  min-width: 0;
+
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
-.edit-header h2 {
-  margin-top: 4px;
-  color: var(--primary);
-  font-size: 25px;
-}
-
-.edit-close {
-  width: 42px;
-  height: 42px;
+.edit-header-icon {
+  width: 46px;
+  height: 46px;
   flex-shrink: 0;
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  background: var(--surface);
-  color: var(--text-secondary);
+
+  border: 1px solid
+    color-mix(
+      in srgb,
+      var(--primary) 30%,
+      var(--border)
+    );
+
+  border-radius: 15px;
+
+  background: var(--primary-soft);
+  color: var(--primary);
+
   display: grid;
   place-items: center;
 }
 
+.edit-header span {
+  color: var(--text-secondary);
+
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+}
+
+.edit-header h2 {
+  margin-top: 3px;
+
+  color: var(--text);
+
+  font-size: 24px;
+  font-weight: 850;
+}
+
+.edit-close {
+  width: 43px;
+  height: 43px;
+  flex-shrink: 0;
+
+  border: 1px solid var(--border);
+  border-radius: 14px;
+
+  background: var(--surface);
+  color: var(--text-secondary);
+
+  display: grid;
+  place-items: center;
+
+  cursor: pointer;
+}
+
+.edit-information {
+  padding: 12px 13px;
+
+  border: 1px solid
+    color-mix(
+      in srgb,
+      var(--primary) 25%,
+      var(--border)
+    );
+
+  border-radius: 15px;
+
+  background: var(--primary-soft);
+  color: var(--text-secondary);
+
+  display: flex;
+  align-items: center;
+  gap: 9px;
+
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.edit-information svg {
+  flex-shrink: 0;
+  color: var(--primary);
+}
+
 .edit-label {
   display: block;
-  margin: 15px 0 8px;
+
+  margin: 17px 0 8px;
+
   color: var(--text-secondary);
+
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 750;
 }
 
 .edit-type-selector {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 9px;
+  gap: 10px;
 }
 
 .edit-type-selector button {
-  min-height: 50px;
+  min-width: 0;
+  min-height: 62px;
+
+  padding: 10px 13px;
+
   border: 1px solid var(--border);
-  border-radius: 15px;
+  border-radius: 17px;
+
   background: var(--surface);
   color: var(--text-secondary);
-  font-weight: 800;
+
+  display: flex;
+  align-items: center;
+  gap: 9px;
+
+  text-align: left;
+  cursor: pointer;
+
+  transition:
+    transform 0.16s ease,
+    background 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.edit-type-selector button span {
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.edit-type-selector button strong {
+  color: inherit;
+
+  font-size: 14px;
+  font-weight: 850;
+}
+
+.edit-type-selector button small {
+  color: inherit;
+
+  font-size: 10px;
+  font-weight: 650;
+
+  opacity: 0.78;
+}
+
+.edit-type-selector button:active {
+  transform: scale(0.97);
 }
 
 .edit-type-selector .selected-income {
   border-color: var(--success);
-  background: var(--success);
-  color: #fff;
+
+  background:
+    color-mix(
+      in srgb,
+      var(--success) 14%,
+      var(--surface)
+    );
+
+  color: var(--success);
 }
 
 .edit-type-selector .selected-expense {
   border-color: var(--danger);
-  background: var(--danger);
-  color: #fff;
+
+  background:
+    color-mix(
+      in srgb,
+      var(--danger) 13%,
+      var(--surface)
+    );
+
+  color: var(--danger);
 }
 
 .edit-amount {
-  min-height: 62px;
+  min-height: 64px;
+
   padding: 0 16px;
+
   border: 1px solid var(--border);
   border-radius: 18px;
+
   background: var(--surface);
+
   display: flex;
   align-items: center;
   gap: 10px;
+
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .edit-amount span {
   color: var(--primary);
-  font-size: 24px;
-  font-weight: 800;
+
+  font-size: 25px;
+  font-weight: 850;
 }
 
 .edit-amount input {
   width: 100%;
+  min-width: 0;
+
   border: 0;
   outline: 0;
+
   background: transparent;
   color: var(--text);
+
   font-size: 25px;
-  font-weight: 800;
+  font-weight: 850;
 }
 
 .edit-description {
   width: 100%;
-  min-height: 54px;
+  min-height: 55px;
+
   padding: 0 16px;
+
   border: 1px solid var(--border);
-  border-radius: 16px;
+  border-radius: 17px;
   outline: 0;
+
   background: var(--surface);
   color: var(--text);
+
   font-size: 16px;
+
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .edit-amount:focus-within,
 .edit-description:focus {
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px var(--primary-soft);
+
+  box-shadow:
+    0 0 0 3px
+    var(--primary-soft);
+}
+
+.edit-error {
+  margin-top: 10px;
+  padding: 10px 12px;
+
+  border: 1px solid
+    color-mix(
+      in srgb,
+      var(--danger) 30%,
+      var(--border)
+    );
+
+  border-radius: 13px;
+
+  background:
+    color-mix(
+      in srgb,
+      var(--danger) 8%,
+      var(--surface)
+    );
+
+  color: var(--danger);
+
+  font-size: 12px;
+  font-weight: 750;
 }
 
 .edit-actions {
+  position: sticky;
+  bottom: 0;
+
   display: grid;
   gap: 9px;
+
   margin-top: 22px;
+  padding-top: 12px;
+
+  background: var(--background);
 }
 
 .edit-actions button {
-  min-height: 54px;
+  width: 100%;
+  min-height: 55px;
+
   border-radius: 17px;
-  font-size: 16px;
-  font-weight: 800;
+
+  font-size: 15px;
+  font-weight: 850;
+
+  cursor: pointer;
 }
 
 .edit-save {
-  border: 1px solid var(--primary);
-  background: var(--primary);
-  color: #fff;
+  border: 0;
+  color: #ffffff;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.edit-save-income {
+  background: linear-gradient(
+    145deg,
+    var(--success),
+    var(--success-dark)
+  );
+}
+
+.edit-save-expense {
+  background: linear-gradient(
+    145deg,
+    var(--danger),
+    var(--danger-dark)
+  );
 }
 
 .edit-cancel {
   border: 1px solid var(--border);
+
   background: var(--surface);
   color: var(--text-secondary);
 }
 
 .edit-actions button:disabled,
-.edit-close:disabled {
+.edit-close:disabled,
+.edit-type-selector button:disabled {
   cursor: not-allowed;
-  opacity: 0.6;
+  opacity: 0.58;
 }
 
 @keyframes edit-sheet-open {
   from {
     transform: translateY(100%);
+    opacity: 0.65;
   }
 
   to {
     transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@media (max-height: 700px) {
+  .edit-header {
+    margin-bottom: 12px;
+  }
+
+  .edit-information {
+    padding: 9px 11px;
+  }
+
+  .edit-label {
+    margin-top: 11px;
+  }
+
+  .edit-type-selector button {
+    min-height: 55px;
+  }
+
+  .edit-amount {
+    min-height: 55px;
+  }
+
+  .edit-description {
+    min-height: 49px;
   }
 }
