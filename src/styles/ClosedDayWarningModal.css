@@ -1,0 +1,237 @@
+.closed-day-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1500;
+
+  padding:
+    calc(
+      18px +
+      env(safe-area-inset-top)
+    )
+    18px
+    calc(
+      18px +
+      env(safe-area-inset-bottom)
+    );
+
+  background: rgba(15, 23, 42, 0.66);
+
+  backdrop-filter: blur(11px);
+  -webkit-backdrop-filter: blur(11px);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.closed-day-warning {
+  position: relative;
+
+  width: 100%;
+  max-width: 420px;
+
+  padding: 25px 20px 20px;
+
+  border: 1px solid
+    color-mix(
+      in srgb,
+      var(--primary) 30%,
+      var(--border)
+    );
+
+  border-radius: 25px;
+
+  background: var(--surface);
+  color: var(--text);
+
+  text-align: center;
+
+  box-shadow:
+    0 30px 80px
+    rgba(15, 23, 42, 0.38);
+
+  animation:
+    closed-day-open
+    0.22s
+    ease;
+}
+
+.closed-day-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+
+  width: 40px;
+  height: 40px;
+
+  border: 1px solid var(--border);
+  border-radius: 13px;
+
+  background: var(--surface-soft);
+  color: var(--text-secondary);
+
+  display: grid;
+  place-items: center;
+
+  cursor: pointer;
+}
+
+.closed-day-warning-icon {
+  width: 60px;
+  height: 60px;
+
+  margin: 3px auto 13px;
+
+  border: 1px solid
+    color-mix(
+      in srgb,
+      var(--primary) 35%,
+      var(--border)
+    );
+
+  border-radius: 20px;
+
+  background: var(--primary-soft);
+  color: var(--primary);
+
+  display: grid;
+  place-items: center;
+}
+
+.closed-day-label {
+  color: var(--primary);
+
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: 0.8px;
+}
+
+.closed-day-warning h2 {
+  margin-top: 5px;
+
+  color: var(--text);
+
+  font-size: 23px;
+  font-weight: 850;
+}
+
+.closed-day-warning > p {
+  margin-top: 10px;
+
+  color: var(--text-secondary);
+
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.closed-day-transaction {
+  margin-top: 18px;
+  padding: 14px;
+
+  border: 1px solid var(--border);
+  border-radius: 16px;
+
+  background: var(--surface-soft);
+
+  display: flex;
+  align-items: center;
+  gap: 11px;
+
+  text-align: left;
+}
+
+.closed-day-transaction > svg {
+  flex-shrink: 0;
+  color: var(--primary);
+}
+
+.closed-day-transaction div {
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.closed-day-transaction strong {
+  overflow: hidden;
+
+  color: var(--text);
+
+  font-size: 14px;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.closed-day-transaction span {
+  color: var(--text-secondary);
+
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.closed-day-actions {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr;
+  gap: 10px;
+
+  margin-top: 20px;
+}
+
+.closed-day-actions button {
+  min-height: 53px;
+
+  padding: 0 12px;
+
+  border-radius: 16px;
+
+  font-size: 13px;
+  font-weight: 850;
+
+  cursor: pointer;
+}
+
+.closed-day-cancel {
+  border: 1px solid var(--border);
+
+  background: var(--surface-soft);
+  color: var(--text-secondary);
+}
+
+.closed-day-confirm-edit,
+.closed-day-confirm-delete {
+  border: 0;
+  color: #ffffff;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+
+.closed-day-confirm-edit {
+  background: var(--primary);
+}
+
+.closed-day-confirm-delete {
+  background: var(--danger);
+}
+
+@keyframes closed-day-open {
+  from {
+    transform: scale(0.92);
+    opacity: 0;
+  }
+
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@media (max-width: 370px) {
+  .closed-day-actions {
+    grid-template-columns: 1fr;
+  }
+}

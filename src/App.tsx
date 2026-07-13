@@ -5,7 +5,7 @@ import {
 } from "react";
 
 import "./App.css";
-
+import ClosedDayWarningModal from "./components/ClosedDayWarningModal";
 import AddTransactionModal from "./components/AddTransactionModal";
 import BottomNavigation, {
   type AppPage,
@@ -75,6 +75,10 @@ type PendingTransaction = {
   amount: number;
   description: string;
 };
+type ClosedDayWarning = {
+  action: "edit" | "delete";
+  transaction: Transaction;
+};
 
 function isSameDay(
   timestamp: number,
@@ -98,7 +102,12 @@ function App() {
     transactions,
     setTransactions,
   ] = useState<Transaction[]>([]);
-
+  const [
+   closedDayWarning,
+   setClosedDayWarning,
+  ] = useState<ClosedDayWarning | null>(
+  null
+);
   const [
     dayEnds,
     setDayEnds,
@@ -565,31 +574,36 @@ function App() {
     return Promise.resolve();
   }
 
-  function openEditModal(
-    transaction: Transaction
-  ) {
-    const closedDay =
-      findClosedDay(
-        transaction,
-        dayEnds
-      );
+  function continueEditTransaction(
+  transaction: Transaction
+) {
+  setSelectedTransaction(transaction);
+  setEditModalOpen(true);
+  setSyncError("");
+}
 
-    if (closedDay) {
-      const confirmed =
-        window.confirm(
-          "Bu işlem kapatılmış bir güne ait. Düzenleme yapılırsa eski gün sonu raporu otomatik güncellenecek. Devam edilsin mi?"
-        );
-
-      if (!confirmed) return;
-    }
-
-    setSelectedTransaction(
-      transaction
+function openEditModal(
+  transaction: Transaction
+) {
+  const closedDay =
+    findClosedDay(
+      transaction,
+      dayEnds
     );
 
-    setEditModalOpen(true);
-    setSyncError("");
+  if (closedDay) {
+    setClosedDayWarning({
+      action: "edit",
+      transaction,
+    });
+
+    return;
   }
+
+  continueEditTransaction(
+    transaction
+  );
+}
 
   function saveEditedTransaction(
     id: string,
@@ -650,30 +664,55 @@ function App() {
     return Promise.resolve();
   }
 
-  function requestDeleteTransaction(
-    transaction: Transaction
-  ) {
-    const closedDay =
-      findClosedDay(
-        transaction,
-        dayEnds
-      );
+  function continueDeleteTransaction(
+  transaction: Transaction
+) {
+  setDeleteCandidate(transaction);
+  setSyncError("");
+}
 
-    if (closedDay) {
-      const confirmed =
-        window.confirm(
-          "Bu işlem kapatılmış bir güne ait. Silinirse eski gün sonu raporu otomatik güncellenecek. Devam edilsin mi?"
-        );
-
-      if (!confirmed) return;
-    }
-
-    setDeleteCandidate(
-      transaction
+function requestDeleteTransaction(
+  transaction: Transaction
+) {
+  const closedDay =
+    findClosedDay(
+      transaction,
+      dayEnds
     );
 
-    setSyncError("");
+  if (closedDay) {
+    setClosedDayWarning({
+      action: "delete",
+      transaction,
+    });
+
+    return;
   }
+
+  continueDeleteTransaction(
+    transaction
+  );
+}
+function confirmClosedDayWarning() {
+  if (!closedDayWarning) return;
+
+  const warning =
+    closedDayWarning;
+
+  setClosedDayWarning(null);
+
+  if (warning.action === "edit") {
+    continueEditTransaction(
+      warning.transaction
+    );
+
+    return;
+  }
+
+  continueDeleteTransaction(
+    warning.transaction
+  );
+}
 
   function confirmDeleteTransaction():
     Promise<void> {
@@ -1109,7 +1148,22 @@ function App() {
           )
         }
       />
-
+<ClosedDayWarningModal
+  action={
+    closedDayWarning?.action ??
+    null
+  }
+  transaction={
+    closedDayWarning?.transaction ??
+    null
+  }
+  onClose={() =>
+    setClosedDayWarning(null)
+  }
+  onConfirm={
+    confirmClosedDayWarning
+  }
+/>
       <UndoDeleteToast
         transaction={
           deletedTransaction
