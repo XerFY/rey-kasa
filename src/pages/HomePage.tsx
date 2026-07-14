@@ -143,6 +143,7 @@ function HomePage({
             recentTransactions
           }
           loading={loading}
+          disabled={saving}
           onEdit={
             onEditTransaction
           }
@@ -156,6 +157,7 @@ function HomePage({
         type="button"
         className="day-end"
         onClick={onDayEnd}
+        disabled={saving || loading}
       >
         <Receipt size={21} />
         Gün Sonu

@@ -2,10 +2,15 @@ import {
   doc,
   onSnapshot,
   setDoc,
+  writeBatch,
   type Unsubscribe,
 } from "firebase/firestore";
 
 import { db } from "../firebase";
+
+import {
+  rebuildClosedDay,
+} from "./dayEndService";
 
 import {
   defaultAppSettings,
@@ -15,6 +20,9 @@ import {
   type QuickDescription,
   type ThemeMode,
 } from "../types/AppSettings";
+
+import type { DayEndRecord } from "../types/DayEndRecord";
+import type { Transaction } from "../types/Transaction";
 
 const settingsDocument = doc(
   db,
@@ -301,7 +309,9 @@ export async function saveQuickDescriptions(
 }
 
 export async function saveOpeningBalance(
-  openingBalance: number
+  openingBalance: number,
+  transactions: Transaction[],
+  dayEnds: DayEndRecord[]
 ): Promise<void> {
   if (
     !Number.isFinite(
@@ -313,7 +323,15 @@ export async function saveOpeningBalance(
     );
   }
 
-  await setDoc(
+  if (dayEnds.length > 499) {
+    throw new Error(
+      "Başlangıç kasası tek seferde güncellenemeyecek kadar çok gün sonunu etkiliyor."
+    );
+  }
+
+  const batch = writeBatch(db);
+
+  batch.set(
     settingsDocument,
     {
       openingBalance,
@@ -322,6 +340,23 @@ export async function saveOpeningBalance(
       merge: true,
     }
   );
+
+  dayEnds.forEach((record) => {
+    batch.set(
+      doc(
+        db,
+        "dayEnds",
+        record.id
+      ),
+      rebuildClosedDay(
+        record,
+        transactions,
+        openingBalance
+      )
+    );
+  });
+
+  await batch.commit();
 }
 
 export async function saveGeneralSettings(

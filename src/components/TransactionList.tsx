@@ -6,6 +6,7 @@ import type { Transaction } from "../types/Transaction";
 type Props = {
   transactions: Transaction[];
   loading?: boolean;
+  disabled?: boolean;
   onEdit: (transaction: Transaction) => void;
   onDelete: (transaction: Transaction) => void;
 };
@@ -13,6 +14,7 @@ type Props = {
 function TransactionList({
   transactions,
   loading = false,
+  disabled = false,
   onEdit,
   onDelete,
 }: Props) {
@@ -35,6 +37,12 @@ function TransactionList({
     };
   }, []);
 
+  useEffect(() => {
+    if (disabled) {
+      setOpenMenuId(null);
+    }
+  }, [disabled]);
+
   if (loading) {
     return <div className="empty">İşlemler yükleniyor...</div>;
   }
@@ -47,6 +55,12 @@ function TransactionList({
     <>
       {transactions.map((transaction) => {
         const menuOpen = openMenuId === transaction.id;
+        const transactionDate =
+          new Date(transaction.createdAt);
+        const dateIsValid =
+          Number.isFinite(
+            transactionDate.getTime()
+          );
 
         return (
           <article className="transaction-item" key={transaction.id}>
@@ -69,13 +83,24 @@ function TransactionList({
             </div>
 
             <div className="transaction-right" ref={menuOpen ? menuAreaRef : null}>
-              <time dateTime={new Date(transaction.createdAt).toISOString()}>
-                {new Date(transaction.createdAt).toLocaleString("tr-TR", {
-                  day: "2-digit",
-                  month: "2-digit",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
+              <time
+                dateTime={
+                  dateIsValid
+                    ? transactionDate.toISOString()
+                    : undefined
+                }
+              >
+                {dateIsValid
+                  ? transactionDate.toLocaleString(
+                      "tr-TR",
+                      {
+                        day: "2-digit",
+                        month: "2-digit",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      }
+                    )
+                  : "Tarih bilinmiyor"}
               </time>
 
               <button
@@ -85,6 +110,7 @@ function TransactionList({
                   setOpenMenuId(menuOpen ? null : transaction.id)
                 }
                 aria-label="İşlem seçenekleri"
+                disabled={disabled}
               >
                 <MoreVertical size={20} />
               </button>

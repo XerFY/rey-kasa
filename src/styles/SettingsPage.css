@@ -361,6 +361,22 @@
   box-shadow: var(--shadow);
 }
 
+.settings-global-message.settings-global-error {
+  border-color:
+    color-mix(
+      in srgb,
+      var(--danger) 35%,
+      var(--border)
+    );
+  background:
+    color-mix(
+      in srgb,
+      var(--danger) 10%,
+      var(--surface)
+    );
+  color: var(--danger);
+}
+
 .advanced-settings-form {
   display: flex;
   flex-direction: column;

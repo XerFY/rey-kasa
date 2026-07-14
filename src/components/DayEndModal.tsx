@@ -129,7 +129,9 @@ function DayEndModal({
   return (
     <div
       className="day-end-overlay"
-      onClick={onClose}
+      onClick={() => {
+        if (!archiving) onClose();
+      }}
     >
       <section
         className="day-end-modal"

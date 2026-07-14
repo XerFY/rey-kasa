@@ -10,8 +10,9 @@ type Props = {
   type: "income" | "expense";
   amount: number;
   description: string;
+  saving: boolean;
 
-  onConfirm: () => void;
+  onConfirm: () => Promise<void>;
   onCancel: () => void;
 };
 
@@ -32,6 +33,7 @@ function LargeTransactionModal({
   type,
   amount,
   description,
+  saving,
   onConfirm,
   onCancel,
 }: Props) {
@@ -40,7 +42,9 @@ function LargeTransactionModal({
   return (
     <div
       className="large-warning-overlay"
-      onClick={onCancel}
+      onClick={() => {
+        if (!saving) onCancel();
+      }}
     >
       <section
         className="large-warning-modal"
@@ -52,6 +56,7 @@ function LargeTransactionModal({
           type="button"
           className="large-warning-close"
           onClick={onCancel}
+          disabled={saving}
           aria-label="Kapat"
         >
           <X size={20} />
@@ -103,6 +108,7 @@ function LargeTransactionModal({
             type="button"
             className="large-warning-cancel"
             onClick={onCancel}
+            disabled={saving}
           >
             Vazgeç
           </button>
@@ -110,9 +116,14 @@ function LargeTransactionModal({
           <button
             type="button"
             className="large-warning-confirm"
-            onClick={onConfirm}
+            onClick={() =>
+              void onConfirm()
+            }
+            disabled={saving}
           >
-            Kontrol Ettim, Kaydet
+            {saving
+              ? "Kaydediliyor..."
+              : "Kontrol Ettim, Kaydet"}
           </button>
         </div>
       </section>

@@ -17,9 +17,14 @@ import type {
   QuickDescription,
 } from "../types/AppSettings";
 
+import {
+  parseMoneyInput,
+} from "../utils/moneyUtils";
+
 type Props = {
   open: boolean;
   type: "income" | "expense";
+  saving: boolean;
 
   quickDescriptions:
     QuickDescription[];
@@ -29,7 +34,7 @@ type Props = {
   onSave: (
     amount: number,
     description: string
-  ) => void | Promise<void>;
+  ) => Promise<void>;
 };
 
 function formatMoney(
@@ -47,6 +52,7 @@ function formatMoney(
 function AddTransactionModal({
   open,
   type,
+  saving,
   quickDescriptions,
   onClose,
   onSave,
@@ -93,18 +99,11 @@ function AddTransactionModal({
   ) {
     event.preventDefault();
 
-    const normalizedAmount =
-      amount
-        .replace(/\./g, "")
-        .replace(",", ".");
-
     const numericAmount =
-      Number(normalizedAmount);
+      parseMoneyInput(amount);
 
     if (
-      !Number.isFinite(
-        numericAmount
-      ) ||
+      numericAmount === null ||
       numericAmount <= 0
     ) {
       return;
@@ -122,9 +121,11 @@ function AddTransactionModal({
     );
   }
 
-  function handleQuickDescription(
+function handleQuickDescription(
   item: QuickDescription
 ) {
+  if (saving) return;
+
   setDescription(item.label);
 
   if (
@@ -155,7 +156,9 @@ function AddTransactionModal({
   return (
     <div
       className="modal-overlay"
-      onClick={onClose}
+      onClick={() => {
+        if (!saving) onClose();
+      }}
     >
       <section
         ref={sheetRef}
@@ -185,6 +188,7 @@ function AddTransactionModal({
             type="button"
             className="modal-close"
             onClick={onClose}
+            disabled={saving}
             aria-label="Kapat"
           >
             <X size={20} />
@@ -219,6 +223,7 @@ function AddTransactionModal({
                 }
                 autoComplete="off"
                 autoFocus
+                disabled={saving}
               />
             </div>
 
@@ -244,7 +249,8 @@ function AddTransactionModal({
                 handleInputFocus
               }
               maxLength={80}
-              autoComplete="off"
+                autoComplete="off"
+                disabled={saving}
             />
 
             {visibleDescriptions.length >
@@ -286,6 +292,7 @@ function AddTransactionModal({
                               item
                             )
                           }
+                          disabled={saving}
                         >
                           {hasAmount ? (
                             <Zap size={15} />
@@ -324,14 +331,18 @@ function AddTransactionModal({
                   ? "save-income"
                   : "save-expense"
               }`}
+              disabled={saving}
             >
-              Kaydet
+              {saving
+                ? "Kaydediliyor..."
+                : "Kaydet"}
             </button>
 
             <button
               type="button"
               className="cancel-button"
               onClick={onClose}
+              disabled={saving}
             >
               Vazgeç
             </button>

@@ -30,6 +30,7 @@ type DateFilter =
 type Props = {
   transactions: Transaction[];
   loading: boolean;
+  saving: boolean;
 
   onEditTransaction: (
     transaction: Transaction
@@ -127,6 +128,7 @@ function parseLocalDate(
 function TransactionsPage({
   transactions,
   loading,
+  saving,
   onEditTransaction,
   onDeleteTransaction,
 }: Props) {
@@ -604,6 +606,7 @@ function TransactionsPage({
             filteredTransactions
           }
           loading={loading}
+          disabled={saving}
           onEdit={
             onEditTransaction
           }

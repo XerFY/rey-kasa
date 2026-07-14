@@ -10,12 +10,16 @@ import {
 
 import "../styles/OpeningBalanceCard.css";
 
+import {
+  parseMoneyInput,
+} from "../utils/moneyUtils";
+
 type Props = {
   openingBalance: number;
   saving: boolean;
   onSave: (
     amount: number
-  ) => void | Promise<void>;
+  ) => Promise<void>;
 };
 
 function formatInputValue(
@@ -71,23 +75,19 @@ function OpeningBalanceCard({
   ) {
     event.preventDefault();
 
-    const normalizedAmount = amount
-      .replace(/\./g, "")
-      .replace(",", ".");
-
     const numericAmount =
-      Number(normalizedAmount);
+      parseMoneyInput(amount);
 
-    if (
-      !Number.isFinite(
-        numericAmount
-      )
-    ) {
+    if (numericAmount === null) {
       return;
     }
 
-    await onSave(numericAmount);
-    setSaved(true);
+    try {
+      await onSave(numericAmount);
+      setSaved(true);
+    } catch {
+      setSaved(false);
+    }
   }
 
   return (

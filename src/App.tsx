@@ -1,6 +1,7 @@
 import {
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
@@ -29,7 +30,6 @@ import TransactionsPage from "./pages/TransactionsPage";
 import {
   listenDayEnds,
   saveDayEnd,
-  updateClosedDayAfterChange,
 } from "./services/dayEndService";
 
 import {
@@ -50,6 +50,7 @@ import {
   listenTransactions,
   restoreTransaction,
   updateTransaction,
+  type CashMutationContext,
 } from "./services/transactionService";
 
 import {
@@ -79,23 +80,6 @@ type ClosedDayWarning = {
   action: "edit" | "delete";
   transaction: Transaction;
 };
-
-function isSameDay(
-  timestamp: number,
-  targetDate: Date
-): boolean {
-  const date =
-    new Date(timestamp);
-
-  return (
-    date.getDate() ===
-      targetDate.getDate() &&
-    date.getMonth() ===
-      targetDate.getMonth() &&
-    date.getFullYear() ===
-      targetDate.getFullYear()
-  );
-}
 
 function App() {
   const [
@@ -206,6 +190,11 @@ function App() {
   ] = useState(true);
 
   const [
+    dayEndsLoading,
+    setDayEndsLoading,
+  ] = useState(true);
+
+  const [
     settingsSaving,
     setSettingsSaving,
   ] = useState(false);
@@ -224,6 +213,20 @@ function App() {
     syncError,
     setSyncError,
   ] = useState("");
+
+  const [
+    currentDateKey,
+    setCurrentDateKey,
+  ] = useState(() =>
+    createDateKey(new Date())
+  );
+
+  const savingRef = useRef(false);
+  const editingRef = useRef(false);
+  const deletingRef = useRef(false);
+  const settingsSavingRef =
+    useRef(false);
+  const archivingRef = useRef(false);
 
   useAppTheme(
   settings.theme,
@@ -251,6 +254,33 @@ useEffect(() => {
   settings.businessPhone,
   settings.receiptFooter,
 ]);
+
+  useEffect(() => {
+    function refreshDateKey() {
+      setCurrentDateKey(
+        createDateKey(new Date())
+      );
+    }
+
+    const timer = window.setInterval(
+      refreshDateKey,
+      30_000
+    );
+
+    document.addEventListener(
+      "visibilitychange",
+      refreshDateKey
+    );
+
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener(
+        "visibilitychange",
+        refreshDateKey
+      );
+    };
+  }, []);
+
   const {
     showReminder,
     dismissReminder,
@@ -292,7 +322,6 @@ useEffect(() => {
               );
 
               setLoading(false);
-              setSyncError("");
             },
             (error) => {
               if (!mounted) return;
@@ -403,6 +432,7 @@ useEffect(() => {
               if (!mounted) return;
 
               setDayEnds(records);
+              setDayEndsLoading(false);
             },
             (error) => {
               if (!mounted) return;
@@ -410,10 +440,18 @@ useEffect(() => {
               setSyncError(
                 `Gün sonları yüklenemedi: ${error.message}`
               );
+              setDayEndsLoading(false);
             }
           );
       } catch (error) {
-        console.error(error);
+        if (!mounted) return;
+
+        setDayEndsLoading(false);
+        setSyncError(
+          error instanceof Error
+            ? error.message
+            : "Gün sonları yüklenemedi."
+        );
       }
     }
 
@@ -448,22 +486,20 @@ useEffect(() => {
 
   const todayTransactions =
     useMemo(() => {
-      const today =
-        new Date();
-
       return transactions.filter(
         (transaction) =>
-          isSameDay(
-            transaction.createdAt,
-            today
-          )
+          createDateKey(
+            new Date(
+              transaction.createdAt
+            )
+          ) === currentDateKey
       );
-    }, [transactions]);
+    }, [
+      transactions,
+      currentDateKey,
+    ]);
 
-  const todayDateKey =
-    createDateKey(
-      new Date()
-    );
+  const todayDateKey = currentDateKey;
 
   const todayAlreadyArchived =
     dayEnds.some(
@@ -487,6 +523,32 @@ useEffect(() => {
         )
       : "Henüz işlem yok";
 
+  function cashDataIsReady(): boolean {
+    if (
+      loading ||
+      settingsLoading ||
+      dayEndsLoading
+    ) {
+      setSyncError(
+        "Kasa verileri henüz tamamen yüklenmedi. Lütfen kısa bir süre sonra tekrar dene."
+      );
+
+      return false;
+    }
+
+    return true;
+  }
+
+  function getCashMutationContext():
+    CashMutationContext {
+    return {
+      transactions,
+      dayEnds,
+      openingBalance:
+        settings.openingBalance,
+    };
+  }
+
   function openTransactionModal(
     type: TransactionType
   ) {
@@ -495,36 +557,50 @@ useEffect(() => {
     setSyncError("");
   }
 
-  function persistTransaction(
+  async function persistTransaction(
     transaction: PendingTransaction
-  ) {
+  ): Promise<boolean> {
+    if (
+      savingRef.current ||
+      !cashDataIsReady()
+    ) {
+      return false;
+    }
+
+    savingRef.current = true;
     setSaving(true);
     setSyncError("");
 
-    setTransactionModalOpen(
-      false
-    );
+    try {
+      await createTransaction(
+        {
+          ...transaction,
+          createdAt: Date.now(),
+        },
+        getCashMutationContext()
+      );
 
-    void createTransaction({
-      ...transaction,
-      createdAt: Date.now(),
-    }).catch((error) => {
+      return true;
+    } catch (error) {
       setSyncError(
         error instanceof Error
           ? `İşlem kaydedilemedi: ${error.message}`
           : "İşlem kaydedilemedi."
       );
-    });
 
-    setSaving(false);
+      return false;
+    } finally {
+      savingRef.current = false;
+      setSaving(false);
+    }
   }
 
-  function saveTransaction(
+  async function saveTransaction(
     amount: number,
     description: string
   ): Promise<void> {
-    if (saving) {
-      return Promise.resolve();
+    if (savingRef.current) {
+      return;
     }
 
     const pending: PendingTransaction = {
@@ -546,56 +622,65 @@ useEffect(() => {
         pending
       );
 
-      return Promise.resolve();
-    }
-
-    persistTransaction(
-      pending
-    );
-
-    return Promise.resolve();
-  }
-
-  function confirmLargeTransaction() {
-    if (!pendingLargeTransaction) {
       return;
     }
 
-    persistTransaction(
-      pendingLargeTransaction
+    const saved =
+      await persistTransaction(
+      pending
     );
 
-    setPendingLargeTransaction(
-      null
-    );
+    if (saved) {
+      setTransactionModalOpen(false);
+    }
   }
 
-  function handleCashAdjustment(
+  async function confirmLargeTransaction():
+    Promise<void> {
+    if (
+      !pendingLargeTransaction ||
+      savingRef.current
+    ) {
+      return;
+    }
+
+    const saved =
+      await persistTransaction(
+        pendingLargeTransaction
+      );
+
+    if (saved) {
+      setPendingLargeTransaction(null);
+    }
+  }
+
+  async function handleCashAdjustment(
     difference: number
   ): Promise<void> {
     if (
       !Number.isFinite(difference) ||
       Math.abs(difference) < 0.005
     ) {
-      return Promise.resolve();
+      return;
     }
 
-    setAdjustmentModalOpen(false);
+    const saved =
+      await persistTransaction({
+        type:
+          difference > 0
+            ? "income"
+            : "expense",
 
-    persistTransaction({
-      type:
-        difference > 0
-          ? "income"
-          : "expense",
+        amount:
+          Math.abs(difference),
 
-      amount:
-        Math.abs(difference),
+        description:
+          "Kasa Düzeltmesi",
+      });
 
-      description:
-        "Kasa Düzeltmesi",
-    });
-
-    return Promise.resolve();
+    if (saved) {
+      setAdjustmentModalOpen(false);
+    }
   }
 
   function continueEditTransaction(
@@ -629,7 +714,7 @@ function openEditModal(
   );
 }
 
-  function saveEditedTransaction(
+  async function saveEditedTransaction(
     id: string,
     type: TransactionType,
     amount: number,
@@ -638,54 +723,41 @@ function openEditModal(
     const before =
       selectedTransaction;
 
-    if (!before) {
-      return Promise.resolve();
+    if (
+      !before ||
+      editingRef.current ||
+      !cashDataIsReady()
+    ) {
+      return;
     }
 
-    const after: Transaction = {
-      ...before,
-      type,
-      amount,
-      description,
-    };
-
+    editingRef.current = true;
     setEditing(true);
-    setEditModalOpen(false);
-    setSelectedTransaction(null);
 
-    void updateTransaction(
-      id,
-      {
-        type,
-        amount,
-        description,
-      },
-      before
-    ).catch((error) => {
+    try {
+      await updateTransaction(
+        id,
+        {
+          type,
+          amount,
+          description,
+        },
+        before,
+        getCashMutationContext()
+      );
+
+      setEditModalOpen(false);
+      setSelectedTransaction(null);
+    } catch (error) {
       setSyncError(
         error instanceof Error
           ? `İşlem düzenlenemedi: ${error.message}`
           : "İşlem düzenlenemedi."
       );
-    });
-
-    const closedDay =
-      findClosedDay(
-        before,
-        dayEnds
-      );
-
-    if (closedDay) {
-      void updateClosedDayAfterChange(
-        closedDay,
-        before,
-        after
-      );
+    } finally {
+      editingRef.current = false;
+      setEditing(false);
     }
-
-    setEditing(false);
-
-    return Promise.resolve();
   }
 
   function continueDeleteTransaction(
@@ -738,198 +810,225 @@ function confirmClosedDayWarning() {
   );
 }
 
-  function confirmDeleteTransaction():
+  async function confirmDeleteTransaction():
     Promise<void> {
     if (
       !deleteCandidate ||
-      deleting
+      deletingRef.current ||
+      !cashDataIsReady()
     ) {
-      return Promise.resolve();
+      return;
     }
 
     const transaction =
       deleteCandidate;
 
-    const closedDay =
-      findClosedDay(
+    deletingRef.current = true;
+    setDeleting(true);
+
+    try {
+      await deleteTransaction(
+        transaction.id,
         transaction,
-        dayEnds
+        getCashMutationContext()
       );
 
-    setDeleting(true);
-    setDeleteCandidate(null);
-
-    setDeletedTransaction(
-      transaction
-    );
-
-    void deleteTransaction(
-      transaction.id,
-      transaction
-    ).catch((error) => {
-      setDeletedTransaction(null);
-
+      setDeleteCandidate(null);
+      setDeletedTransaction(transaction);
+    } catch (error) {
       setSyncError(
         error instanceof Error
           ? `İşlem silinemedi: ${error.message}`
           : "İşlem silinemedi."
       );
-    });
-
-    if (closedDay) {
-      void updateClosedDayAfterChange(
-        closedDay,
-        transaction,
-        null
-      );
+    } finally {
+      deletingRef.current = false;
+      setDeleting(false);
     }
-
-    setDeleting(false);
-
-    return Promise.resolve();
   }
 
-  function handleUndoDelete(
+  async function handleUndoDelete(
     transaction: Transaction
   ): Promise<void> {
-    const closedDay =
-      dayEnds.find(
-        (record) =>
-          record.dateKey ===
-          createDateKey(
-            new Date(
-              transaction.createdAt
-            )
-          )
+    if (
+      deletingRef.current ||
+      !cashDataIsReady()
+    ) {
+      return;
+    }
+
+    deletingRef.current = true;
+    setDeleting(true);
+
+    try {
+      await restoreTransaction(
+        transaction,
+        getCashMutationContext()
       );
 
-    void restoreTransaction(
-      transaction
-    ).catch((error) => {
+      setDeletedTransaction(null);
+    } catch (error) {
       setSyncError(
         error instanceof Error
           ? `İşlem geri getirilemedi: ${error.message}`
           : "İşlem geri getirilemedi."
       );
-    });
-
-    if (closedDay) {
-      void updateClosedDayAfterChange(
-        closedDay,
-        null,
-        transaction
-      );
+    } finally {
+      deletingRef.current = false;
+      setDeleting(false);
     }
-
-    setDeletedTransaction(null);
-
-    return Promise.resolve();
   }
 
-  function handleSaveQuickDescriptions(
+  async function handleSaveQuickDescriptions(
     descriptions:
       QuickDescription[]
   ): Promise<void> {
-    setSettingsSaving(true);
+    if (settingsSavingRef.current) {
+      throw new Error(
+        "Başka bir ayar halen kaydediliyor."
+      );
+    }
 
-    void saveQuickDescriptions(
-      descriptions
-    ).catch((error) => {
+    settingsSavingRef.current = true;
+    setSettingsSaving(true);
+    setSyncError("");
+
+    try {
+      await saveQuickDescriptions(
+        descriptions
+      );
+    } catch (error) {
       setSyncError(
         error instanceof Error
           ? error.message
           : "Ayar kaydedilemedi."
       );
-    });
 
-    setSettingsSaving(false);
-
-    return Promise.resolve();
+      throw error;
+    } finally {
+      settingsSavingRef.current = false;
+      setSettingsSaving(false);
+    }
   }
 
-  function handleSaveOpeningBalance(
+  async function handleSaveOpeningBalance(
     amount: number
   ): Promise<void> {
-    setSettingsSaving(true);
+    if (settingsSavingRef.current) {
+      throw new Error(
+        "Başka bir ayar halen kaydediliyor."
+      );
+    }
 
-    void saveOpeningBalance(
-      amount
-    ).catch((error) => {
+    settingsSavingRef.current = true;
+    setSettingsSaving(true);
+    setSyncError("");
+
+    try {
+      await saveOpeningBalance(
+        amount,
+        transactions,
+        dayEnds
+      );
+    } catch (error) {
       setSyncError(
         error instanceof Error
           ? error.message
           : "Başlangıç kasası kaydedilemedi."
       );
-    });
 
-    setSettingsSaving(false);
-
-    return Promise.resolve();
+      throw error;
+    } finally {
+      settingsSavingRef.current = false;
+      setSettingsSaving(false);
+    }
   }
 
-  function handleSaveGeneralSettings(
+  async function handleSaveGeneralSettings(
     newSettings: AppSettings
   ): Promise<void> {
+    if (settingsSavingRef.current) {
+      throw new Error(
+        "Başka bir ayar halen kaydediliyor."
+      );
+    }
+
+    settingsSavingRef.current = true;
     setSettingsSaving(true);
+    setSyncError("");
 
-    setSettings(
-      newSettings
-    );
+    try {
+      await saveGeneralSettings(
+        newSettings
+      );
 
-    void saveGeneralSettings(
-      newSettings
-    ).catch((error) => {
+      setSettings(newSettings);
+    } catch (error) {
       setSyncError(
         error instanceof Error
           ? error.message
           : "Ayarlar kaydedilemedi."
       );
-    });
 
-    setSettingsSaving(false);
-
-    return Promise.resolve();
+      throw error;
+    } finally {
+      settingsSavingRef.current = false;
+      setSettingsSaving(false);
+    }
   }
 
-  function handleArchiveDayEnd():
+  async function handleArchiveDayEnd():
     Promise<void> {
+    if (
+      archivingRef.current ||
+      !cashDataIsReady()
+    ) {
+      return;
+    }
+
+    archivingRef.current = true;
     setArchivingDayEnd(true);
+    setSyncError("");
 
-    void saveDayEnd({
-      transactions:
-        todayTransactions,
+    try {
+      await saveDayEnd({
+        transactions:
+          todayTransactions,
+        balance,
+        dateKey: currentDateKey,
+      });
 
-      balance,
-    }).catch((error) => {
+      if (
+        settings.printer.enabled &&
+        settings.printer
+          .autoPrintDayEnd
+      ) {
+        try {
+          await queueDayEndPrint({
+            transactions:
+              todayTransactions,
+            balance,
+          });
+        } catch (error) {
+          setSyncError(
+            error instanceof Error
+              ? `Gün sonu kaydedildi ancak yazdırma kuyruğuna eklenemedi: ${error.message}`
+              : "Gün sonu kaydedildi ancak yazdırma kuyruğuna eklenemedi."
+          );
+        }
+      }
+
+      dismissReminder();
+    } catch (error) {
       setSyncError(
         error instanceof Error
           ? error.message
           : "Gün sonu kaydedilemedi."
       );
-    });
-
-    if (
-      settings.printer.enabled &&
-      settings.printer
-        .autoPrintDayEnd
-    ) {
-      void queueDayEndPrint({
-        transactions:
-          todayTransactions,
-
-        balance,
-      }).catch((error) => {
-        console.error(
-          "Yazdırma kuyruğu hatası:",
-          error
-        );
-      });
+    } finally {
+      archivingRef.current = false;
+      setArchivingDayEnd(false);
     }
-
-    setArchivingDayEnd(false);
-    dismissReminder();
-
-    return Promise.resolve();
   }
 
   function renderPage() {
@@ -1002,6 +1101,11 @@ function confirmClosedDayWarning() {
             transactions
           }
           loading={loading}
+          saving={
+            saving ||
+            editing ||
+            deleting
+          }
           onEditTransaction={
             openEditModal
           }
@@ -1021,6 +1125,9 @@ function confirmClosedDayWarning() {
             transactions
           }
           dayEnds={dayEnds}
+          currentDateKey={
+            currentDateKey
+          }
         />
       );
     }
@@ -1050,6 +1157,26 @@ function confirmClosedDayWarning() {
   return (
     <>
       <main className="app">
+        {activePage !== "home" &&
+          syncError && (
+            <div
+              className="app-global-error"
+              role="alert"
+            >
+              <span>{syncError}</span>
+
+              <button
+                type="button"
+                onClick={() =>
+                  setSyncError("")
+                }
+                aria-label="Hata mesajını kapat"
+              >
+                ×
+              </button>
+            </div>
+          )}
+
         {renderPage()}
       </main>
 
@@ -1063,6 +1190,7 @@ function confirmClosedDayWarning() {
           transactionModalOpen
         }
         type={transactionType}
+        saving={saving}
         quickDescriptions={
           settings.quickDescriptions
         }
@@ -1163,6 +1291,7 @@ function confirmClosedDayWarning() {
           pendingLargeTransaction
             ?.description ?? ""
         }
+        saving={saving}
         onConfirm={
           confirmLargeTransaction
         }

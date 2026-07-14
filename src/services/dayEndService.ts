@@ -37,16 +37,25 @@ function createDateKey(
 type CreateDayEndParams = {
   transactions: Transaction[];
   balance: number;
+  dateKey: string;
 };
 
 export async function saveDayEnd({
   transactions,
   balance,
+  dateKey,
 }: CreateDayEndParams): Promise<void> {
-  const now = new Date();
-  const dateKey = createDateKey(now);
+  const dayTransactions =
+    transactions.filter(
+      (transaction) =>
+        createDateKey(
+          new Date(
+            transaction.createdAt
+          )
+        ) === dateKey
+    );
 
-  const totalIncome = transactions
+  const totalIncome = dayTransactions
     .filter(
       (transaction) =>
         transaction.type === "income"
@@ -57,7 +66,7 @@ export async function saveDayEnd({
       0
     );
 
-  const totalExpense = transactions
+  const totalExpense = dayTransactions
     .filter(
       (transaction) =>
         transaction.type === "expense"
@@ -88,9 +97,9 @@ export async function saveDayEnd({
     balance,
 
     transactionCount:
-      transactions.length,
+      dayTransactions.length,
 
-    transactions,
+    transactions: dayTransactions,
   };
 
   await setDoc(
@@ -98,45 +107,42 @@ export async function saveDayEnd({
     record
   );
 }
-export async function updateClosedDayAfterChange(
+
+export function rebuildClosedDay(
   record: DayEndRecord,
-  before: Transaction | null,
-  after: Transaction | null
-): Promise<void> {
-  let updatedTransactions =
-    record.transactions.filter(
+  transactions: Transaction[],
+  openingBalance: number
+): Omit<DayEndRecord, "id"> & {
+  updatedAt: number;
+} {
+  const dayTransactions =
+    transactions
+      .filter(
+        (transaction) =>
+          createDateKey(
+            new Date(
+              transaction.createdAt
+            )
+          ) === record.dateKey
+      )
+      .sort(
+        (first, second) =>
+          second.createdAt -
+          first.createdAt
+      );
+
+  const transactionsThroughDay =
+    transactions.filter(
       (transaction) =>
-        transaction.id !== before?.id &&
-        transaction.id !== after?.id
+        createDateKey(
+          new Date(
+            transaction.createdAt
+          )
+        ) <= record.dateKey
     );
-
-  if (after) {
-    updatedTransactions = [
-      ...updatedTransactions,
-      after,
-    ].sort(
-      (first, second) =>
-        second.createdAt -
-        first.createdAt
-    );
-  }
-
-  const beforeAmount =
-    before === null
-      ? 0
-      : before.type === "income"
-        ? before.amount
-        : -before.amount;
-
-  const afterAmount =
-    after === null
-      ? 0
-      : after.type === "income"
-        ? after.amount
-        : -after.amount;
 
   const totalIncome =
-    updatedTransactions
+    dayTransactions
       .filter(
         (transaction) =>
           transaction.type === "income"
@@ -148,7 +154,7 @@ export async function updateClosedDayAfterChange(
       );
 
   const totalExpense =
-    updatedTransactions
+    dayTransactions
       .filter(
         (transaction) =>
           transaction.type === "expense"
@@ -159,37 +165,32 @@ export async function updateClosedDayAfterChange(
         0
       );
 
-  await setDoc(
-    doc(
-      db,
-      "dayEnds",
-      record.id
+  return {
+    dateKey: record.dateKey,
+    closedAt: record.closedAt,
+
+    totalIncome,
+    totalExpense,
+
+    netTotal:
+      totalIncome - totalExpense,
+
+    balance: transactionsThroughDay.reduce(
+      (total, transaction) =>
+        transaction.type === "income"
+          ? total + transaction.amount
+          : total - transaction.amount,
+      openingBalance
     ),
-    {
-      dateKey: record.dateKey,
-      closedAt: record.closedAt,
 
-      totalIncome,
-      totalExpense,
+    transactionCount:
+      dayTransactions.length,
 
-      netTotal:
-        totalIncome -
-        totalExpense,
+    transactions:
+      dayTransactions,
 
-      balance:
-        record.balance +
-        afterAmount -
-        beforeAmount,
-
-      transactionCount:
-        updatedTransactions.length,
-
-      transactions:
-        updatedTransactions,
-
-      updatedAt: Date.now(),
-    }
-  );
+    updatedAt: Date.now(),
+  };
 }
 export function listenDayEnds(
   onData: (

@@ -17,6 +17,10 @@ import "../styles/EditTransactionModal.css";
 
 import type { Transaction } from "../types/Transaction";
 
+import {
+  parseMoneyInput,
+} from "../utils/moneyUtils";
+
 type Props = {
   open: boolean;
   transaction: Transaction | null;
@@ -138,15 +142,11 @@ function EditTransactionModal({
 
     if (saving) return;
 
-    const normalizedAmount = amount
-      .replace(/\./g, "")
-      .replace(",", ".");
-
     const numericAmount =
-      Number(normalizedAmount);
+      parseMoneyInput(amount);
 
     if (
-      !Number.isFinite(numericAmount) ||
+      numericAmount === null ||
       numericAmount <= 0
     ) {
       setValidationError(

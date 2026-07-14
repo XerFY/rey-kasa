@@ -5,15 +5,12 @@ import {
 import {
   addDoc,
   collection,
-  deleteDoc,
   doc,
-  getDocFromCache,
   limit,
   onSnapshot,
   orderBy,
   query,
-  setDoc,
-  updateDoc,
+  writeBatch,
   type DocumentData,
   type QueryDocumentSnapshot,
   type Unsubscribe,
@@ -24,6 +21,10 @@ import {
   db,
 } from "../firebase";
 
+import {
+  rebuildClosedDay,
+} from "./dayEndService";
+
 import type {
   AuditAction,
   AuditLog,
@@ -32,6 +33,20 @@ import type {
 import type {
   Transaction,
 } from "../types/Transaction";
+
+import type {
+  DayEndRecord,
+} from "../types/DayEndRecord";
+
+import {
+  createDateKey,
+} from "../utils/dateUtils";
+
+export type CashMutationContext = {
+  transactions: Transaction[];
+  dayEnds: DayEndRecord[];
+  openingBalance: number;
+};
 
 const transactionsCollection =
   collection(
@@ -45,13 +60,25 @@ const auditLogsCollection =
     "auditLogs"
   );
 
+let authenticationPromise:
+  Promise<void> | null = null;
+
 async function ensureAuthenticated():
   Promise<void> {
-  if (!auth.currentUser) {
-    await signInAnonymously(
-      auth
-    );
+  if (auth.currentUser) {
+    return;
   }
+
+  if (!authenticationPromise) {
+    authenticationPromise =
+      signInAnonymously(auth)
+        .then(() => undefined)
+        .finally(() => {
+          authenticationPromise = null;
+        });
+  }
+
+  await authenticationPromise;
 }
 
 function mapTransaction(
@@ -116,55 +143,75 @@ async function writeAuditLog(
   }
 }
 
-async function readCachedTransaction(
-  id: string
-): Promise<Transaction | null> {
-  try {
-    const snapshot =
-      await getDocFromCache(
+async function commitCashMutation(
+  context: CashMutationContext,
+  before: Transaction | null,
+  after: Transaction | null,
+  mutate: (
+    batch: ReturnType<typeof writeBatch>
+  ) => void
+): Promise<void> {
+  const changedTransaction =
+    after ?? before;
+
+  if (!changedTransaction) {
+    throw new Error(
+      "Değiştirilecek kasa işlemi bulunamadı."
+    );
+  }
+
+  const nextTransactions = [
+    ...context.transactions.filter(
+      (transaction) =>
+        transaction.id !== before?.id &&
+        transaction.id !== after?.id
+    ),
+    ...(after ? [after] : []),
+  ];
+
+  const changedDateKey =
+    createDateKey(
+      new Date(
+        changedTransaction.createdAt
+      )
+    );
+
+  const affectedDayEnds =
+    context.dayEnds.filter(
+      (record) =>
+        record.dateKey >= changedDateKey
+    );
+
+  // Firestore batch sınırı 500 yazmadır.
+  // Bir yazma ana kasa işlemi için ayrılır.
+  if (affectedDayEnds.length > 499) {
+    throw new Error(
+      "Bu eski işlem tek seferde güncellenemeyecek kadar çok gün sonunu etkiliyor."
+    );
+  }
+
+  const batch = writeBatch(db);
+
+  mutate(batch);
+
+  affectedDayEnds.forEach(
+    (record) => {
+      batch.set(
         doc(
           db,
-          "transactions",
-          id
+          "dayEnds",
+          record.id
+        ),
+        rebuildClosedDay(
+          record,
+          nextTransactions,
+          context.openingBalance
         )
       );
-
-    if (!snapshot.exists()) {
-      return null;
     }
+  );
 
-    const data =
-      snapshot.data();
-
-    return {
-      id: snapshot.id,
-
-      type:
-        data.type === "expense"
-          ? "expense"
-          : "income",
-
-      amount:
-        typeof data.amount ===
-          "number"
-          ? data.amount
-          : 0,
-
-      description:
-        typeof data.description ===
-          "string"
-          ? data.description
-          : "",
-
-      createdAt:
-        typeof data.createdAt ===
-          "number"
-          ? data.createdAt
-          : Date.now(),
-    };
-  } catch {
-    return null;
-  }
+  await batch.commit();
 }
 
 export async function connectFirebase():
@@ -221,7 +268,8 @@ export function listenTransactions(
 
 export async function createTransaction(
   transaction:
-    Omit<Transaction, "id">
+    Omit<Transaction, "id">,
+  context: CashMutationContext
 ): Promise<void> {
   await ensureAuthenticated();
 
@@ -238,10 +286,16 @@ export async function createTransaction(
       ...transaction,
     };
 
-  // Önce asıl kasa kaydı yapılır.
-  await setDoc(
-    transactionDocument,
-    transaction
+  await commitCashMutation(
+    context,
+    null,
+    newTransaction,
+    (batch) => {
+      batch.set(
+        transactionDocument,
+        transaction
+      );
+    }
   );
 
   // Geçmiş kaydı kasa kaydını
@@ -264,7 +318,8 @@ export async function updateTransaction(
     | "description"
   >,
 
-  suppliedBefore?: Transaction
+  suppliedBefore: Transaction,
+  context: CashMutationContext
 ): Promise<void> {
   await ensureAuthenticated();
 
@@ -275,18 +330,9 @@ export async function updateTransaction(
       id
     );
 
-  const before =
-    suppliedBefore ??
-    (
-      await readCachedTransaction(
-        id
-      )
-    );
+  const before = suppliedBefore;
 
-  const after:
-    Transaction | null =
-      before
-        ? {
+  const after: Transaction = {
             ...before,
 
             type:
@@ -297,21 +343,22 @@ export async function updateTransaction(
 
             description:
               changes.description,
-          }
-        : null;
+          };
 
-  // Önce asıl işlem güncellenir.
-  await updateDoc(
-    transactionDocument,
-    {
-      type:
-        changes.type,
-
-      amount:
-        changes.amount,
-
-      description:
-        changes.description,
+  await commitCashMutation(
+    context,
+    before,
+    after,
+    (batch) => {
+      batch.update(
+        transactionDocument,
+        {
+          type: changes.type,
+          amount: changes.amount,
+          description:
+            changes.description,
+        }
+      );
     }
   );
 
@@ -325,7 +372,8 @@ export async function updateTransaction(
 
 export async function deleteTransaction(
   id: string,
-  suppliedBefore?: Transaction
+  suppliedBefore: Transaction,
+  context: CashMutationContext
 ): Promise<Transaction | null> {
   await ensureAuthenticated();
 
@@ -336,17 +384,17 @@ export async function deleteTransaction(
       id
     );
 
-  const before =
-    suppliedBefore ??
-    (
-      await readCachedTransaction(
-        id
-      )
-    );
+  const before = suppliedBefore;
 
-  // Önce asıl işlem silinir.
-  await deleteDoc(
-    transactionDocument
+  await commitCashMutation(
+    context,
+    before,
+    null,
+    (batch) => {
+      batch.delete(
+        transactionDocument
+      );
+    }
   );
 
   void writeAuditLog(
@@ -360,7 +408,8 @@ export async function deleteTransaction(
 }
 
 export async function restoreTransaction(
-  transaction: Transaction
+  transaction: Transaction,
+  context: CashMutationContext
 ): Promise<void> {
   await ensureAuthenticated();
 
@@ -371,21 +420,22 @@ export async function restoreTransaction(
       transaction.id
     );
 
-  // Önce asıl işlem geri getirilir.
-  await setDoc(
-    transactionDocument,
-    {
-      type:
-        transaction.type,
-
-      amount:
-        transaction.amount,
-
-      description:
-        transaction.description,
-
-      createdAt:
-        transaction.createdAt,
+  await commitCashMutation(
+    context,
+    null,
+    transaction,
+    (batch) => {
+      batch.set(
+        transactionDocument,
+        {
+          type: transaction.type,
+          amount: transaction.amount,
+          description:
+            transaction.description,
+          createdAt:
+            transaction.createdAt,
+        }
+      );
     }
   );
 

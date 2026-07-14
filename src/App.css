@@ -41,6 +41,46 @@ button {
   calc(105px + env(safe-area-inset-bottom));
 }
 
+.app-global-error {
+  position: sticky;
+  top: calc(8px + env(safe-area-inset-top));
+  z-index: 50;
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border: 1px solid
+    color-mix(
+      in srgb,
+      var(--danger) 35%,
+      var(--border)
+    );
+  border-radius: 12px;
+  background:
+    color-mix(
+      in srgb,
+      var(--danger) 10%,
+      var(--surface)
+    );
+  color: var(--danger);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  box-shadow: var(--shadow);
+}
+
+.app-global-error button {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: currentColor;
+  cursor: pointer;
+}
+
 .sync-status {
   width: fit-content;
   margin: -12px auto 18px;

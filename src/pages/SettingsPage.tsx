@@ -19,12 +19,18 @@ import {
 import "../styles/SettingsPage.css";
 import BackupManager from "../components/BackupManager";
 import AuditHistory from "../components/AuditHistory";
-import OpeningBalanceCard from "../components/OpeningBalanceCard";import type {
+import OpeningBalanceCard from "../components/OpeningBalanceCard";
+
+import type {
   AppSettings,
   QuickDescription,
   QuickDescriptionType,
   ThemeMode,
 } from "../types/AppSettings";
+
+import {
+  parseMoneyInput,
+} from "../utils/moneyUtils";
 
 type Props = {
   settings: AppSettings;
@@ -33,15 +39,15 @@ type Props = {
 
   onSaveQuickDescriptions: (
     descriptions: QuickDescription[]
-  ) => void | Promise<void>;
+  ) => Promise<void>;
 
   onSaveOpeningBalance: (
     amount: number
-  ) => void | Promise<void>;
+  ) => Promise<void>;
 
   onSaveGeneralSettings: (
     settings: AppSettings
-  ) => void | Promise<void>;
+  ) => Promise<void>;
 };
 
 function SettingsPage({
@@ -73,6 +79,11 @@ function SettingsPage({
     savedMessage,
     setSavedMessage,
   ] = useState("");
+
+  const [
+    saveMessageIsError,
+    setSaveMessageIsError,
+  ] = useState(false);
 
   const [
     draft,
@@ -112,6 +123,28 @@ function SettingsPage({
         "expense"
     );
 
+  const formDisabled =
+    loading || saving;
+
+  function showSaveSuccess(
+    message: string
+  ) {
+    setSaveMessageIsError(false);
+    setSavedMessage(message);
+  }
+
+  function showSaveError(
+    error: unknown,
+    fallback: string
+  ) {
+    setSaveMessageIsError(true);
+    setSavedMessage(
+      error instanceof Error
+        ? error.message
+        : fallback
+    );
+  }
+
   function updateSetting<
     Key extends keyof AppSettings,
   >(
@@ -124,9 +157,9 @@ function SettingsPage({
     }));
   }
 
-  function updateTheme(
+  async function updateTheme(
   theme: ThemeMode
-) {
+): Promise<void> {
   const themeNames:
     Record<ThemeMode, string> = {
       light: "Açık İnci",
@@ -145,19 +178,29 @@ function SettingsPage({
 
   setDraft(updatedSettings);
 
-  void onSaveGeneralSettings(
-    updatedSettings
-  );
+  try {
+    await onSaveGeneralSettings(
+      updatedSettings
+    );
 
-  setSavedMessage(
-    `${themeNames[theme]} teması etkinleştirildi`
-  );
+    showSaveSuccess(
+      `${themeNames[theme]} teması etkinleştirildi`
+    );
+  } catch (error) {
+    setDraft(settings);
+    showSaveError(
+      error,
+      "Tema kaydedilemedi."
+    );
+  }
 }
 
   async function handleAddDescription(
     event: FormEvent<HTMLFormElement>
   ) {
     event.preventDefault();
+
+    if (formDisabled) return;
 
     const cleanLabel =
       newDescription.trim();
@@ -178,20 +221,17 @@ function SettingsPage({
       );
 
     if (alreadyExists) {
-      setSavedMessage(
+      showSaveSuccess(
         "Bu açıklama zaten kayıtlı"
       );
 
       return;
     }
 
-    const normalizedAmount =
-      newDescriptionAmount
-        .replace(/\./g, "")
-        .replace(",", ".");
-
     const numericAmount =
-      Number(normalizedAmount);
+      parseMoneyInput(
+        newDescriptionAmount
+      );
 
     const newItem: QuickDescription = {
       id: crypto.randomUUID(),
@@ -199,9 +239,7 @@ function SettingsPage({
       label: cleanLabel,
 
       ...(
-        Number.isFinite(
-          numericAmount
-        ) &&
+        numericAmount !== null &&
         numericAmount > 0
           ? {
               amount:
@@ -211,35 +249,51 @@ function SettingsPage({
       ),
     };
 
-    await onSaveQuickDescriptions([
-      ...settings.quickDescriptions,
-      newItem,
-    ]);
+    try {
+      await onSaveQuickDescriptions([
+        ...settings.quickDescriptions,
+        newItem,
+      ]);
 
-    setNewDescription("");
-    setNewDescriptionAmount("");
+      setNewDescription("");
+      setNewDescriptionAmount("");
 
-    setSavedMessage(
-      typeof newItem.amount ===
-        "number"
-        ? "Tek dokunuşluk işlem eklendi"
-        : "Hazır açıklama eklendi"
-    );
+      showSaveSuccess(
+        typeof newItem.amount ===
+          "number"
+          ? "Tek dokunuşluk işlem eklendi"
+          : "Hazır açıklama eklendi"
+      );
+    } catch (error) {
+      showSaveError(
+        error,
+        "Hazır açıklama eklenemedi."
+      );
+    }
   }
 
   async function handleDeleteDescription(
     id: string
   ) {
-    await onSaveQuickDescriptions(
-      settings.quickDescriptions.filter(
-        (description) =>
-          description.id !== id
-      )
-    );
+    if (formDisabled) return;
 
-    setSavedMessage(
-      "Hazır açıklama silindi"
-    );
+    try {
+      await onSaveQuickDescriptions(
+        settings.quickDescriptions.filter(
+          (description) =>
+            description.id !== id
+        )
+      );
+
+      showSaveSuccess(
+        "Hazır açıklama silindi"
+      );
+    } catch (error) {
+      showSaveError(
+        error,
+        "Hazır açıklama silinemedi."
+      );
+    }
   }
 
   async function handleGeneralSubmit(
@@ -247,13 +301,37 @@ function SettingsPage({
   ) {
     event.preventDefault();
 
-    await onSaveGeneralSettings(
-      draft
-    );
+    if (formDisabled) return;
 
-    setSavedMessage(
-      "Ayarlar kaydedildi"
-    );
+    try {
+      await onSaveGeneralSettings(
+        draft
+      );
+
+      showSaveSuccess(
+        "Ayarlar kaydedildi"
+      );
+    } catch (error) {
+      showSaveError(
+        error,
+        "Ayarlar kaydedilemedi."
+      );
+    }
+  }
+
+  async function handleOpeningBalanceSave(
+    amount: number
+  ): Promise<void> {
+    try {
+      await onSaveOpeningBalance(amount);
+    } catch (error) {
+      showSaveError(
+        error,
+        "Başlangıç kasası kaydedilemedi."
+      );
+
+      throw error;
+    }
   }
 
   function renderDescriptionGroup(
@@ -322,7 +400,7 @@ function SettingsPage({
                         description.id
                       )
                     }
-                    disabled={saving}
+                    disabled={formDisabled}
                     aria-label="Açıklamayı sil"
                   >
                     <Trash2 size={18} />
@@ -350,7 +428,13 @@ function SettingsPage({
       </header>
 
       {savedMessage && (
-        <div className="settings-global-message">
+        <div
+          className={`settings-global-message ${
+            saveMessageIsError
+              ? "settings-global-error"
+              : ""
+          }`}
+        >
           {savedMessage}
         </div>
       )}
@@ -359,9 +443,9 @@ function SettingsPage({
         openingBalance={
           settings.openingBalance
         }
-        saving={saving}
+        saving={formDisabled}
         onSave={
-          onSaveOpeningBalance
+          handleOpeningBalanceSave
         }
       />
 
@@ -405,7 +489,7 @@ function SettingsPage({
                   )
                 }
                 maxLength={50}
-                disabled={saving}
+                disabled={formDisabled}
               />
             </label>
 
@@ -425,7 +509,7 @@ function SettingsPage({
                 }
                 maxLength={25}
                 placeholder="İsteğe bağlı"
-                disabled={saving}
+                disabled={formDisabled}
               />
             </label>
 
@@ -446,7 +530,7 @@ function SettingsPage({
                   )
                 }
                 maxLength={70}
-                disabled={saving}
+                disabled={formDisabled}
               />
             </label>
           </div>
@@ -478,7 +562,7 @@ function SettingsPage({
     onClick={() =>
       updateTheme("light")
     }
-    disabled={saving}
+    disabled={formDisabled}
   >
     Açık İnci
   </button>
@@ -493,7 +577,7 @@ function SettingsPage({
     onClick={() =>
       updateTheme("dark")
     }
-    disabled={saving}
+    disabled={formDisabled}
   >
     Koyu Grafit
   </button>
@@ -508,7 +592,7 @@ function SettingsPage({
     onClick={() =>
       updateTheme("emerald")
     }
-    disabled={saving}
+    disabled={formDisabled}
   >
     Zümrüt Altın
   </button>
@@ -523,7 +607,7 @@ function SettingsPage({
     onClick={() =>
       updateTheme("midnight")
     }
-    disabled={saving}
+    disabled={formDisabled}
   >
     Safir Gece
   </button>
@@ -538,7 +622,7 @@ function SettingsPage({
     onClick={() =>
       updateTheme("burgundy")
     }
-    disabled={saving}
+    disabled={formDisabled}
   >
     Bordo Altın
   </button>
@@ -553,7 +637,7 @@ function SettingsPage({
     onClick={() =>
       updateTheme("system")
     }
-    disabled={saving}
+    disabled={formDisabled}
   >
     Otomatik
     </button>
@@ -602,6 +686,7 @@ function SettingsPage({
                   event.target.checked
                 )
               }
+              disabled={formDisabled}
             />
           </label>
 
@@ -752,6 +837,7 @@ function SettingsPage({
                   })
                 )
               }
+              disabled={formDisabled}
             />
           </label>
 
@@ -781,6 +867,7 @@ function SettingsPage({
                 }
                 placeholder="192.168.1.200"
                 disabled={
+                  formDisabled ||
                   !draft.printer.enabled
                 }
               />
@@ -812,6 +899,7 @@ function SettingsPage({
                   )
                 }
                 disabled={
+                  formDisabled ||
                   !draft.printer.enabled
                 }
               />
@@ -852,6 +940,7 @@ function SettingsPage({
                 )
               }
               disabled={
+                formDisabled ||
                 !draft.printer.enabled
               }
             />
@@ -861,7 +950,7 @@ function SettingsPage({
         <button
           type="submit"
           className="save-all-settings"
-          disabled={saving}
+          disabled={formDisabled}
         >
           <Save size={20} />
 
@@ -941,7 +1030,7 @@ function SettingsPage({
               )
             }
             maxLength={40}
-            disabled={saving}
+            disabled={formDisabled}
           />
 
           <div className="quick-amount-setting">
@@ -959,14 +1048,14 @@ function SettingsPage({
                   event.target.value
                 )
               }
-              disabled={saving}
+              disabled={formDisabled}
             />
           </div>
 
           <button
             type="submit"
             disabled={
-              saving ||
+              formDisabled ||
               !newDescription.trim()
             }
           >

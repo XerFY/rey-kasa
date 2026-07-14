@@ -29,6 +29,7 @@ type ReportPeriod =
 type Props = {
   transactions: Transaction[];
   dayEnds: DayEndRecord[];
+  currentDateKey: string;
 };
 
 type PeriodRange = {
@@ -287,6 +288,7 @@ function ComparisonValue({
 function ReportsPage({
   transactions,
   dayEnds,
+  currentDateKey,
 }: Props) {
   const [
     period,
@@ -301,7 +303,10 @@ function ReportsPage({
         getPeriodRange(
           period
         ),
-      [period]
+      [
+        period,
+        currentDateKey,
+      ]
     );
 
   const reportTransactions =

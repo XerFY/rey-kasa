@@ -12,6 +12,10 @@ import {
 
 import "../styles/CashAdjustmentModal.css";
 
+import {
+  parseMoneyInput,
+} from "../utils/moneyUtils";
+
 type Props = {
   open: boolean;
   currentBalance: number;
@@ -19,7 +23,7 @@ type Props = {
   onClose: () => void;
   onSave: (
     difference: number
-  ) => void | Promise<void>;
+  ) => Promise<void>;
 };
 
 function formatMoney(
@@ -49,14 +53,13 @@ function CashAdjustmentModal({
 
   const numericActualAmount =
     useMemo(() => {
-      const normalized =
-        actualAmount
-          .replace(/\./g, "")
-          .replace(",", ".");
+      const value =
+        parseMoneyInput(
+          actualAmount
+        );
 
-      const value = Number(normalized);
-
-      return Number.isFinite(value)
+      return value !== null &&
+        value >= 0
         ? value
         : null;
     }, [actualAmount]);
@@ -111,7 +114,9 @@ function CashAdjustmentModal({
   return (
     <div
       className="adjustment-overlay"
-      onClick={onClose}
+      onClick={() => {
+        if (!saving) onClose();
+      }}
     >
       <section
         className="adjustment-modal"
@@ -179,6 +184,7 @@ function CashAdjustmentModal({
               }}
               autoComplete="off"
               autoFocus
+              disabled={saving}
             />
           </div>
 
@@ -216,6 +222,7 @@ function CashAdjustmentModal({
               className="adjustment-continue"
               disabled={
                 difference === null ||
+                saving ||
                 Math.abs(
                   difference
                 ) < 0.005

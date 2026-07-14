@@ -31,7 +31,12 @@ function DeleteTransactionModal({
   }
 
   return (
-    <div className="delete-overlay" onClick={onClose}>
+    <div
+      className="delete-overlay"
+      onClick={() => {
+        if (!deleting) onClose();
+      }}
+    >
       <section
         className="delete-modal"
         onClick={(event) => event.stopPropagation()}
