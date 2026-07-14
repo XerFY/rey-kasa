@@ -28,7 +28,7 @@
 
 .report-period-selector {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 8px;
 
   padding: 5px;
@@ -63,7 +63,209 @@
       in srgb,
       var(--primary) 20%,
       transparent
+  );
+}
+
+.report-custom-range {
+  margin-top: 14px;
+  padding: 16px;
+
+  overflow: hidden;
+
+  border: 1px solid
+    color-mix(
+      in srgb,
+      var(--primary) 24%,
+      var(--border)
     );
+  border-radius: 20px;
+
+  background:
+    linear-gradient(
+      145deg,
+      color-mix(
+        in srgb,
+        var(--primary-soft) 64%,
+        var(--surface)
+      ),
+      var(--surface) 58%
+    );
+
+  box-shadow: var(--shadow);
+}
+
+.report-custom-range-heading {
+  margin-bottom: 15px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.report-custom-range-heading > div {
+  min-width: 0;
+
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.report-custom-range-icon {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+
+  border-radius: 13px;
+
+  background: var(--primary);
+  color: #ffffff;
+
+  display: grid;
+  place-items: center;
+
+  box-shadow: 0 8px 20px
+    color-mix(
+      in srgb,
+      var(--primary) 22%,
+      transparent
+    );
+}
+
+.report-custom-range-heading strong,
+.report-custom-range-heading span {
+  display: block;
+}
+
+.report-custom-range-heading strong {
+  color: var(--text);
+  font-size: 14px;
+}
+
+.report-custom-range-heading > div > div > span {
+  margin-top: 3px;
+
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.report-custom-range-heading small {
+  padding: 5px 8px;
+
+  border: 1px solid
+    color-mix(
+      in srgb,
+      var(--primary) 25%,
+      transparent
+    );
+  border-radius: 999px;
+
+  background: var(--surface);
+  color: var(--primary);
+
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: 0.7px;
+}
+
+.report-date-fields {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1fr)
+    minmax(0, 1fr);
+  gap: 10px;
+}
+
+.report-date-fields label {
+  min-width: 0;
+}
+
+.report-date-fields label > span {
+  display: block;
+
+  margin: 0 0 7px 2px;
+
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.report-date-fields input[type="date"] {
+  display: block;
+
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 48px;
+
+  box-sizing: border-box;
+  padding: 0 12px;
+
+  overflow: hidden;
+
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  outline: 0;
+
+  background: var(--surface);
+  color: var(--text);
+
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 750;
+
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.report-date-fields input[type="date"]:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px
+    var(--primary-soft);
+}
+
+.report-date-fields input[type="date"]::-webkit-date-and-time-value {
+  width: 100%;
+  min-height: 48px;
+
+  margin: 0;
+  padding: 0;
+
+  color: var(--text);
+  font: inherit;
+
+  display: flex;
+  align-items: center;
+
+  text-align: left;
+}
+
+.report-date-fields input[type="date"]::-webkit-calendar-picker-indicator {
+  margin: 0;
+  padding: 0;
+  opacity: 0.65;
+}
+
+.report-date-ready,
+.report-date-error {
+  margin: 12px 1px 0;
+
+  display: flex;
+  align-items: center;
+  gap: 7px;
+
+  font-size: 10px;
+  font-weight: 750;
+  line-height: 1.4;
+}
+
+.report-date-ready {
+  color: var(--success);
+}
+
+.report-date-error {
+  color: var(--danger);
 }
 
 .report-period-heading {
@@ -76,6 +278,8 @@
 }
 
 .report-period-heading div {
+  min-width: 0;
+
   color: var(--text);
 
   display: flex;
@@ -84,6 +288,10 @@
 
   font-size: 15px;
   font-weight: 800;
+}
+
+.report-period-heading div span {
+  overflow-wrap: anywhere;
 }
 
 .report-period-heading svg {
@@ -355,6 +563,18 @@
 
 .comparison-neutral {
   color: var(--text-muted);
+}
+
+@media (max-width: 520px) {
+  .report-date-fields {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 440px) {
+  .report-period-selector {
+    grid-template-columns: 1fr 1fr;
+  }
 }
 
 @media (max-width: 380px) {

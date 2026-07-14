@@ -1,5 +1,6 @@
 .settings-page {
   padding-top: 8px;
+  padding-bottom: 12px;
 }
 
 .settings-header {
@@ -25,6 +26,178 @@
   color: var(--text-secondary);
   font-size: 14px;
   line-height: 1.5;
+}
+
+.settings-tab-navigation {
+  position: sticky;
+  top: calc(
+    8px + env(safe-area-inset-top)
+  );
+  z-index: 14;
+
+  margin-bottom: 18px;
+  padding: 5px 5px 9px;
+
+  border: 1px solid
+    color-mix(
+      in srgb,
+      var(--border) 88%,
+      transparent
+    );
+  border-radius: 22px;
+
+  background:
+    color-mix(
+      in srgb,
+      var(--surface) 92%,
+      transparent
+    );
+
+  box-shadow: var(--shadow-sm);
+  backdrop-filter: blur(16px);
+}
+
+.settings-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 5px;
+}
+
+.settings-tabs button {
+  min-width: 0;
+  min-height: 54px;
+  padding: 6px 5px;
+
+  border: 0;
+  border-radius: 17px;
+
+  background: transparent;
+  color: var(--text-muted);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+
+  cursor: pointer;
+}
+
+.settings-tabs button strong {
+  overflow: hidden;
+
+  font-size: 12px;
+  font-weight: 850;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settings-tab-icon {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+
+  border-radius: 10px;
+
+  background: var(--surface-soft);
+  color: var(--text-secondary);
+
+  display: grid;
+  place-items: center;
+}
+
+.settings-tabs button.active {
+  background:
+    linear-gradient(
+      145deg,
+      var(--primary),
+      color-mix(
+        in srgb,
+        var(--primary) 78%,
+        #111827
+      )
+    );
+
+  color: var(--on-primary);
+
+  box-shadow:
+    0 9px 18px
+    color-mix(
+      in srgb,
+      var(--primary) 22%,
+      transparent
+    );
+}
+
+.settings-tabs button.active
+  .settings-tab-icon {
+  background:
+    color-mix(
+      in srgb,
+      var(--surface) 22%,
+      transparent
+    );
+  color: var(--on-primary);
+}
+
+.settings-tab-navigation > p {
+  margin: 7px 8px 0;
+
+  overflow: hidden;
+
+  color: var(--text-muted);
+
+  font-size: 10px;
+  font-weight: 700;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settings-tab-panel {
+  animation:
+    settings-panel-in 0.2s ease both;
+}
+
+.settings-panel-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.settings-panel-stack
+  > :is(
+    .settings-card,
+    .opening-balance-card,
+    .audit-history
+  ) {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.settings-panel-stack
+  > .settings-panel-stack {
+  margin: 0;
+}
+
+.settings-tab-panel.settings-panel-stack
+  > .settings-card
+  + .settings-card,
+.settings-tab-panel.settings-panel-stack
+  > .audit-history {
+  margin-top: 0;
+}
+
+@keyframes settings-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .settings-card {
@@ -79,6 +252,10 @@
   gap: 9px;
 
   margin-top: 20px;
+}
+
+.description-form > input:first-child {
+  grid-column: 1 / -1;
 }
 
 .description-form input {
@@ -265,7 +442,43 @@
   font-size: 14px;
   font-weight: 800;
 
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
   cursor: pointer;
+}
+
+.settings-type-selector button small {
+  min-width: 23px;
+  padding: 3px 6px;
+
+  border-radius: 999px;
+
+  background:
+    color-mix(
+      in srgb,
+      currentColor 11%,
+      transparent
+    );
+
+  font-size: 10px;
+  font-weight: 850;
+}
+
+.settings-type-selector
+  :is(
+    .settings-income-selected,
+    .settings-expense-selected
+  )
+  small {
+  background:
+    color-mix(
+      in srgb,
+      #ffffff 18%,
+      transparent
+    );
 }
 
 .settings-type-selector .settings-income-selected {
@@ -319,18 +532,21 @@
   margin-top: 20px;
 }
 .settings-global-message {
-  position: sticky;
+  position: fixed;
   top:
     calc(
-      10px +
+      12px +
       env(safe-area-inset-top)
     );
 
-  z-index: 20;
+  left: 50%;
 
-  width: fit-content;
+  z-index: 40;
 
-  margin: 0 auto 16px;
+  width: max-content;
+  max-width: calc(100vw - 32px);
+
+  margin: 0;
   padding: 9px 13px;
 
   border: 1px solid
@@ -359,6 +575,8 @@
   gap: 7px;
 
   box-shadow: var(--shadow);
+
+  transform: translateX(-50%);
 }
 
 .settings-global-message.settings-global-error {
@@ -382,7 +600,7 @@
   flex-direction: column;
   gap: 16px;
 
-  margin-bottom: 16px;
+  margin-bottom: 0;
 }
 
 .settings-fields,
@@ -522,6 +740,39 @@
   cursor: pointer;
 }
 
+.settings-switch-row input:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.settings-option-block {
+  margin-top: 15px;
+  padding: 0 14px 13px;
+
+  border: 1px solid var(--border);
+  border-radius: 17px;
+
+  background: var(--surface-soft);
+}
+
+.settings-option-block
+  + .settings-option-block {
+  margin-top: 10px;
+}
+
+.settings-option-block
+  .settings-switch-row {
+  margin-top: 0;
+  border-top: 0;
+}
+
+.settings-option-block
+  .settings-inline-field input,
+.settings-option-block
+  .settings-money-input {
+  background: var(--surface);
+}
+
 .settings-inline-field {
   margin-top: 12px;
 }
@@ -584,13 +835,50 @@
   cursor: wait;
 }
 
+.settings-system-divider {
+  margin: 4px 2px -2px;
+
+  color: var(--text-muted);
+
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: 0.25px;
+  text-transform: uppercase;
+}
+
+.settings-system-divider::after {
+  height: 1px;
+  flex: 1;
+
+  background: var(--border);
+
+  content: "";
+}
+
 @media (max-width: 390px) {
   .theme-selector {
-    grid-template-columns: 1fr;
+    grid-template-columns:
+      repeat(2, 1fr);
   }
 
   .printer-fields {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 360px) {
+  .settings-tabs button {
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .settings-tab-icon {
+    width: 25px;
+    height: 25px;
   }
 }
 .quick-amount-setting {

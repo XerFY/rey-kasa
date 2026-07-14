@@ -33,7 +33,7 @@ import {
 } from "./services/dayEndService";
 
 import {
-  queueDayEndPrint,
+  queueTransactionPrint,
 } from "./services/printerQueueService";
 
 import {
@@ -79,6 +79,11 @@ type PendingTransaction = {
 type ClosedDayWarning = {
   action: "edit" | "delete";
   transaction: Transaction;
+};
+
+type PrintFeedback = {
+  kind: "info" | "success" | "error";
+  message: string;
 };
 
 function App() {
@@ -205,6 +210,20 @@ function App() {
   ] = useState(false);
 
   const [
+    printingTransactionId,
+    setPrintingTransactionId,
+  ] = useState<string | null>(
+    null
+  );
+
+  const [
+    printFeedback,
+    setPrintFeedback,
+  ] = useState<PrintFeedback | null>(
+    null
+  );
+
+  const [
     hasPendingWrites,
     setHasPendingWrites,
   ] = useState(false);
@@ -227,6 +246,8 @@ function App() {
   const settingsSavingRef =
     useRef(false);
   const archivingRef = useRef(false);
+  const printingTransactionRef =
+    useRef<string | null>(null);
 
   useAppTheme(
   settings.theme,
@@ -254,6 +275,21 @@ useEffect(() => {
   settings.businessPhone,
   settings.receiptFooter,
 ]);
+
+  useEffect(() => {
+    if (!printFeedback) {
+      return;
+    }
+
+    const timer = window.setTimeout(
+      () => setPrintFeedback(null),
+      4_500
+    );
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [printFeedback]);
 
   useEffect(() => {
     function refreshDateKey() {
@@ -977,6 +1013,84 @@ function confirmClosedDayWarning() {
     }
   }
 
+  async function handlePrintTransaction(
+    transaction: Transaction
+  ): Promise<void> {
+    if (printingTransactionRef.current) {
+      setPrintFeedback({
+        kind: "info",
+        message:
+          printingTransactionRef.current ===
+          transaction.id
+            ? "Bu işlem için yazdırma isteği gönderiliyor."
+            : "Önce mevcut yazdırma isteğinin tamamlanmasını bekle.",
+      });
+
+      return;
+    }
+
+    if (loading || settingsLoading) {
+      setPrintFeedback({
+        kind: "error",
+        message:
+          "Kasa ve fiş ayarları henüz hazır değil.",
+      });
+
+      return;
+    }
+
+    printingTransactionRef.current =
+      transaction.id;
+    setPrintingTransactionId(
+      transaction.id
+    );
+    setPrintFeedback({
+      kind: "info",
+      message:
+        "Yazdırma isteği gönderiliyor...",
+    });
+
+    try {
+      await connectFirebase();
+
+      const result =
+        await queueTransactionPrint({
+          transaction,
+          currentBalance: balance,
+          storeTitle:
+            settings.businessName,
+          thankYouMessage:
+            settings.receiptFooter,
+        });
+
+      setPrintFeedback(
+        result.created
+          ? {
+              kind: "success",
+              message:
+                "Yazdırma isteği kuyruğa eklendi.",
+            }
+          : {
+              kind: "info",
+              message:
+                "Bu işlem için daha önce yazdırma isteği oluşturuldu.",
+            }
+      );
+    } catch (error) {
+      setPrintFeedback({
+        kind: "error",
+        message:
+          error instanceof Error
+            ? `Yazdırma isteği gönderilemedi: ${error.message}`
+            : "Yazdırma isteği gönderilemedi.",
+      });
+    } finally {
+      printingTransactionRef.current =
+        null;
+      setPrintingTransactionId(null);
+    }
+  }
+
   async function handleArchiveDayEnd():
     Promise<void> {
     if (
@@ -997,26 +1111,6 @@ function confirmClosedDayWarning() {
         balance,
         dateKey: currentDateKey,
       });
-
-      if (
-        settings.printer.enabled &&
-        settings.printer
-          .autoPrintDayEnd
-      ) {
-        try {
-          await queueDayEndPrint({
-            transactions:
-              todayTransactions,
-            balance,
-          });
-        } catch (error) {
-          setSyncError(
-            error instanceof Error
-              ? `Gün sonu kaydedildi ancak yazdırma kuyruğuna eklenemedi: ${error.message}`
-              : "Gün sonu kaydedildi ancak yazdırma kuyruğuna eklenemedi."
-          );
-        }
-      }
 
       dismissReminder();
     } catch (error) {
@@ -1046,6 +1140,15 @@ function confirmClosedDayWarning() {
             saving ||
             editing ||
             deleting
+          }
+          printDisabled={
+            loading ||
+            settingsLoading ||
+            printingTransactionId !==
+              null
+          }
+          printingTransactionId={
+            printingTransactionId
           }
           syncError={syncError}
           hasPendingWrites={
@@ -1087,6 +1190,9 @@ function confirmClosedDayWarning() {
           onDeleteTransaction={
             requestDeleteTransaction
           }
+          onPrintTransaction={
+            handlePrintTransaction
+          }
         />
       );
     }
@@ -1106,11 +1212,23 @@ function confirmClosedDayWarning() {
             editing ||
             deleting
           }
+          printDisabled={
+            loading ||
+            settingsLoading ||
+            printingTransactionId !==
+              null
+          }
+          printingTransactionId={
+            printingTransactionId
+          }
           onEditTransaction={
             openEditModal
           }
           onDeleteTransaction={
             requestDeleteTransaction
+          }
+          onPrintTransaction={
+            handlePrintTransaction
           }
         />
       );
@@ -1157,6 +1275,34 @@ function confirmClosedDayWarning() {
   return (
     <>
       <main className="app">
+        {printFeedback && (
+          <div
+            className={
+              `app-print-feedback app-print-feedback-${printFeedback.kind}`
+            }
+            role={
+              printFeedback.kind ===
+              "error"
+                ? "alert"
+                : "status"
+            }
+          >
+            <span>
+              {printFeedback.message}
+            </span>
+
+            <button
+              type="button"
+              onClick={() =>
+                setPrintFeedback(null)
+              }
+              aria-label="Yazdırma mesajını kapat"
+            >
+              ×
+            </button>
+          </div>
+        )}
+
         {activePage !== "home" &&
           syncError && (
             <div

@@ -19,6 +19,8 @@ type Props = {
 
   loading: boolean;
   saving: boolean;
+  printDisabled: boolean;
+  printingTransactionId: string | null;
   syncError: string;
   hasPendingWrites: boolean;
 
@@ -40,6 +42,10 @@ type Props = {
   onDeleteTransaction: (
     transaction: Transaction
   ) => void;
+
+  onPrintTransaction: (
+    transaction: Transaction
+  ) => Promise<void>;
 };
 
 function HomePage({
@@ -47,6 +53,8 @@ function HomePage({
   todayTransactions,
   loading,
   saving,
+  printDisabled,
+  printingTransactionId,
   syncError,
   hasPendingWrites,
   balance,
@@ -59,6 +67,7 @@ function HomePage({
   onDayEnd,
   onEditTransaction,
   onDeleteTransaction,
+  onPrintTransaction,
 }: Props) {
   const recentTransactions =
     transactions.slice(0, 5);
@@ -144,11 +153,20 @@ function HomePage({
           }
           loading={loading}
           disabled={saving}
+          printDisabled={
+            printDisabled
+          }
+          printingTransactionId={
+            printingTransactionId
+          }
           onEdit={
             onEditTransaction
           }
           onDelete={
             onDeleteTransaction
+          }
+          onPrint={
+            onPrintTransaction
           }
         />
       </section>

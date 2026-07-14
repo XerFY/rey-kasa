@@ -14,6 +14,7 @@ import "../styles/TransactionsPage.css";
 import TransactionList from "../components/TransactionList";
 
 import type { Transaction } from "../types/Transaction";
+import { createDateKey } from "../utils/dateUtils";
 
 type TransactionFilter =
   | "all"
@@ -31,6 +32,8 @@ type Props = {
   transactions: Transaction[];
   loading: boolean;
   saving: boolean;
+  printDisabled: boolean;
+  printingTransactionId: string | null;
 
   onEditTransaction: (
     transaction: Transaction
@@ -39,7 +42,21 @@ type Props = {
   onDeleteTransaction: (
     transaction: Transaction
   ) => void;
+
+  onPrintTransaction: (
+    transaction: Transaction
+  ) => Promise<void>;
 };
+
+type TransactionDayGroup = {
+  dateKey: string;
+  sortValue: number;
+  transactions: Transaction[];
+  income: number;
+  expense: number;
+};
+
+const INVALID_DATE_KEY = "invalid-date";
 
 function formatMoney(
   amount: number
@@ -125,12 +142,89 @@ function parseLocalDate(
   ).getTime();
 }
 
+function getDayHeading(
+  dateKey: string
+): {
+  badgeDay: string;
+  badgeMonth: string;
+  eyebrow: string;
+  title: string;
+} {
+  if (dateKey === INVALID_DATE_KEY) {
+    return {
+      badgeDay: "--",
+      badgeMonth: "TAR",
+      eyebrow: "Tarih bilgisi yok",
+      title: "Tarihi bilinmeyen işlemler",
+    };
+  }
+
+  const [year, month, day] =
+    dateKey.split("-").map(Number);
+
+  const date = new Date(
+    year,
+    month - 1,
+    day,
+    12
+  );
+
+  const todayKey = createDateKey(
+    new Date()
+  );
+
+  const yesterday = new Date();
+  yesterday.setDate(
+    yesterday.getDate() - 1
+  );
+
+  const yesterdayKey =
+    createDateKey(yesterday);
+
+  const weekday =
+    date.toLocaleDateString(
+      "tr-TR",
+      { weekday: "long" }
+    );
+
+  const eyebrow =
+    dateKey === todayKey
+      ? "Bugün"
+      : dateKey === yesterdayKey
+        ? "Dün"
+        : weekday.charAt(0).toLocaleUpperCase("tr-TR") +
+          weekday.slice(1);
+
+  return {
+    badgeDay: String(day).padStart(2, "0"),
+    badgeMonth: date
+      .toLocaleDateString(
+        "tr-TR",
+        { month: "short" }
+      )
+      .replace(".", "")
+      .toLocaleUpperCase("tr-TR"),
+    eyebrow,
+    title: date.toLocaleDateString(
+      "tr-TR",
+      {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      }
+    ),
+  };
+}
+
 function TransactionsPage({
   transactions,
   loading,
   saving,
+  printDisabled,
+  printingTransactionId,
   onEditTransaction,
   onDeleteTransaction,
+  onPrintTransaction,
 }: Props) {
   const [
     searchText,
@@ -269,6 +363,81 @@ function TransactionsPage({
             transaction.amount,
           0
         );
+    }, [filteredTransactions]);
+
+  const transactionDayGroups =
+    useMemo<TransactionDayGroup[]>(() => {
+      const groups = new Map<
+        string,
+        TransactionDayGroup
+      >();
+
+      filteredTransactions.forEach(
+        (transaction) => {
+          const transactionDate =
+            new Date(
+              transaction.createdAt
+            );
+
+          const dateIsValid =
+            Number.isFinite(
+              transactionDate.getTime()
+            );
+
+          const dateKey = dateIsValid
+            ? createDateKey(
+                transactionDate
+              )
+            : INVALID_DATE_KEY;
+
+          const currentGroup =
+            groups.get(dateKey) ?? {
+              dateKey,
+              sortValue: dateIsValid
+                ? transactionDate.getTime()
+                : Number.NEGATIVE_INFINITY,
+              transactions: [],
+              income: 0,
+              expense: 0,
+            };
+
+          currentGroup.transactions.push(
+            transaction
+          );
+
+          if (
+            transaction.type ===
+            "income"
+          ) {
+            currentGroup.income +=
+              transaction.amount;
+          } else {
+            currentGroup.expense +=
+              transaction.amount;
+          }
+
+          if (dateIsValid) {
+            currentGroup.sortValue =
+              Math.max(
+                currentGroup.sortValue,
+                transactionDate.getTime()
+              );
+          }
+
+          groups.set(
+            dateKey,
+            currentGroup
+          );
+        }
+      );
+
+      return Array.from(
+        groups.values()
+      ).sort(
+        (first, second) =>
+          second.sortValue -
+          first.sortValue
+      );
     }, [filteredTransactions]);
 
   const filtersActive =
@@ -600,20 +769,159 @@ function TransactionsPage({
         </div>
       )}
 
-      <div className="transactions">
-        <TransactionList
-          transactions={
-            filteredTransactions
-          }
-          loading={loading}
-          disabled={saving}
-          onEdit={
-            onEditTransaction
-          }
-          onDelete={
-            onDeleteTransaction
-          }
-        />
+      <div className="transactions transaction-day-groups">
+        {loading ||
+        transactionDayGroups.length ===
+          0 ? (
+          <TransactionList
+            transactions={[]}
+            loading={loading}
+            disabled={saving}
+            printDisabled={
+              printDisabled
+            }
+            printingTransactionId={
+              printingTransactionId
+            }
+            onEdit={
+              onEditTransaction
+            }
+            onDelete={
+              onDeleteTransaction
+            }
+            onPrint={
+              onPrintTransaction
+            }
+          />
+        ) : (
+          transactionDayGroups.map(
+            (dayGroup) => {
+              const heading =
+                getDayHeading(
+                  dayGroup.dateKey
+                );
+
+              const net =
+                dayGroup.income -
+                dayGroup.expense;
+
+              const headingId =
+                `transaction-day-${dayGroup.dateKey}`;
+
+              return (
+                <section
+                  className="transaction-day-card"
+                  key={dayGroup.dateKey}
+                  aria-labelledby={
+                    headingId
+                  }
+                >
+                  <header className="transaction-day-header">
+                    <div
+                      className="transaction-day-date-badge"
+                      aria-hidden="true"
+                    >
+                      <strong>
+                        {heading.badgeDay}
+                      </strong>
+
+                      <span>
+                        {heading.badgeMonth}
+                      </span>
+                    </div>
+
+                    <div className="transaction-day-title">
+                      <span>
+                        {heading.eyebrow}
+                      </span>
+
+                      <h2 id={headingId}>
+                        {heading.title}
+                      </h2>
+                    </div>
+
+                    <span className="transaction-day-count">
+                      {
+                        dayGroup
+                          .transactions
+                          .length
+                      }{" "}
+                      işlem
+                    </span>
+                  </header>
+
+                  <div className="transaction-day-summary">
+                    <div className="transaction-day-summary-income">
+                      <span>Gelir</span>
+
+                      <strong>
+                        +₺
+                        {formatMoney(
+                          dayGroup.income
+                        )}
+                      </strong>
+                    </div>
+
+                    <div className="transaction-day-summary-expense">
+                      <span>Gider</span>
+
+                      <strong>
+                        -₺
+                        {formatMoney(
+                          dayGroup.expense
+                        )}
+                      </strong>
+                    </div>
+
+                    <div className="transaction-day-summary-net">
+                      <span>Günlük Net</span>
+
+                      <strong
+                        className={
+                          net >= 0
+                            ? "is-positive"
+                            : "is-negative"
+                        }
+                      >
+                        {net >= 0
+                          ? "+"
+                          : "-"}
+                        ₺
+                        {formatMoney(
+                          Math.abs(net)
+                        )}
+                      </strong>
+                    </div>
+                  </div>
+
+                  <div className="transaction-day-list">
+                    <TransactionList
+                      transactions={
+                        dayGroup.transactions
+                      }
+                      disabled={saving}
+                      printDisabled={
+                        printDisabled
+                      }
+                      printingTransactionId={
+                        printingTransactionId
+                      }
+                      onEdit={
+                        onEditTransaction
+                      }
+                      onDelete={
+                        onDeleteTransaction
+                      }
+                      onPrint={
+                        onPrintTransaction
+                      }
+                    />
+                  </div>
+                </section>
+              );
+            }
+          )
+        )}
       </div>
     </section>
   );

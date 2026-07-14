@@ -1,5 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { MoreVertical, Pencil, Trash2 } from "lucide-react";
+import {
+  MoreVertical,
+  Pencil,
+  Printer,
+  Trash2,
+} from "lucide-react";
 
 import type { Transaction } from "../types/Transaction";
 
@@ -7,16 +12,24 @@ type Props = {
   transactions: Transaction[];
   loading?: boolean;
   disabled?: boolean;
+  printDisabled?: boolean;
+  printingTransactionId?: string | null;
   onEdit: (transaction: Transaction) => void;
   onDelete: (transaction: Transaction) => void;
+  onPrint: (
+    transaction: Transaction
+  ) => Promise<void>;
 };
 
 function TransactionList({
   transactions,
   loading = false,
   disabled = false,
+  printDisabled = false,
+  printingTransactionId = null,
   onEdit,
   onDelete,
+  onPrint,
 }: Props) {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const menuAreaRef = useRef<HTMLDivElement>(null);
@@ -55,6 +68,9 @@ function TransactionList({
     <>
       {transactions.map((transaction) => {
         const menuOpen = openMenuId === transaction.id;
+        const isPrinting =
+          printingTransactionId ===
+          transaction.id;
         const transactionDate =
           new Date(transaction.createdAt);
         const dateIsValid =
@@ -117,6 +133,28 @@ function TransactionList({
 
               {menuOpen && (
                 <div className="transaction-menu">
+                  <button
+                    type="button"
+                    className="transaction-print-option"
+                    disabled={
+                      disabled ||
+                      printDisabled ||
+                      isPrinting
+                    }
+                    onClick={async () => {
+                      await onPrint(
+                        transaction
+                      );
+
+                      setOpenMenuId(null);
+                    }}
+                  >
+                    <Printer size={17} />
+                    {isPrinting
+                      ? "Gönderiliyor..."
+                      : "Yazdır"}
+                  </button>
+
                   <button
                     type="button"
                     onClick={() => {

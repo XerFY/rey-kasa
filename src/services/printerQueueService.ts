@@ -1,212 +1,177 @@
 import {
-  addDoc,
-  collection,
   doc,
-  onSnapshot,
-  orderBy,
-  query,
-  updateDoc,
-  type Unsubscribe,
+  runTransaction,
+  serverTimestamp,
 } from "firebase/firestore";
 
-import { db } from "../firebase";
+import { auth, db } from "../firebase";
 
-import type { PrintJob } from "../types/PrintJob";
+import type {
+  PrintJobPayload,
+  QueueTransactionPrintResult,
+} from "../types/PrintJob";
 import type { Transaction } from "../types/Transaction";
 
-const printJobsCollection =
-  collection(
-    db,
-    "printJobs"
-  );
+const PRINTER_ID = "koddata-kdp95" as const;
 
-type QueueDayEndParams = {
-  transactions: Transaction[];
-  balance: number;
+type QueueTransactionPrintParams = {
+  transaction: Transaction;
+  currentBalance: number;
+  storeTitle: string;
+  thankYouMessage: string;
 };
 
-export async function queueDayEndPrint({
-  transactions,
-  balance,
-}: QueueDayEndParams): Promise<string> {
-  const result =
-    await addDoc(
-      printJobsCollection,
-      {
-        type: "dayEnd",
-        status: "pending",
+function requiredText(
+  value: string,
+  fallback: string
+): string {
+  const normalized = value.trim();
 
-        transactions,
-        balance,
-
-        createdAt: Date.now(),
-        printedAt: null,
-
-        attemptCount: 0,
-        lastError: "",
-      }
-    );
-
-  return result.id;
+  return normalized || fallback;
 }
 
-export async function queueTestPrint(): Promise<string> {
-  const result =
-    await addDoc(
-      printJobsCollection,
-      {
-        type: "test",
-        status: "pending",
-
-        transactions: [],
-        balance: 0,
-
-        createdAt: Date.now(),
-        printedAt: null,
-
-        attemptCount: 0,
-        lastError: "",
-      }
+function validatePrintSnapshot({
+  transaction,
+  currentBalance,
+}: Pick<
+  QueueTransactionPrintParams,
+  "transaction" | "currentBalance"
+>): void {
+  if (!transaction.id) {
+    throw new Error(
+      "İşlem kimliği bulunamadı."
     );
+  }
 
-  return result.id;
+  if (
+    !Number.isFinite(transaction.createdAt) ||
+    transaction.createdAt <= 0
+  ) {
+    throw new Error(
+      "İşlem tarihi geçersiz."
+    );
+  }
+
+  if (
+    !Number.isFinite(transaction.amount) ||
+    transaction.amount <= 0
+  ) {
+    throw new Error(
+      "İşlem tutarı geçersiz."
+    );
+  }
+
+  if (!Number.isFinite(currentBalance)) {
+    throw new Error(
+      "Güncel kasa bilgisi geçersiz."
+    );
+  }
 }
 
-export function listenPrintJobs(
-  onData: (
-    jobs: PrintJob[]
-  ) => void,
+export async function queueTransactionPrint({
+  transaction,
+  currentBalance,
+  storeTitle,
+  thankYouMessage,
+}: QueueTransactionPrintParams): Promise<QueueTransactionPrintResult> {
+  validatePrintSnapshot({
+    transaction,
+    currentBalance,
+  });
 
-  onError: (error: Error) => void
-): Unsubscribe {
-  const jobsQuery = query(
-    printJobsCollection,
-    orderBy("createdAt", "desc")
+  const createdBy = auth.currentUser?.uid;
+
+  if (!createdBy) {
+    throw new Error(
+      "Yazdırma için Firebase bağlantısı hazır değil."
+    );
+  }
+
+  const jobId = transaction.id;
+  const jobReference = doc(
+    db,
+    "printJobs",
+    jobId
+  );
+  const creationLogReference = doc(
+    db,
+    "printLogs",
+    `job-created-${jobId}`
   );
 
-  return onSnapshot(
-    jobsQuery,
-    (snapshot) => {
-      const jobs =
-        snapshot.docs.map(
-          (document) => {
-            const data =
-              document.data();
+  const payload: PrintJobPayload =
+    Object.freeze({
+      storeTitle: requiredText(
+        storeTitle,
+        "REY KASA"
+      ),
+      occurredAt: transaction.createdAt,
+      transactionType: transaction.type,
+      description: requiredText(
+        transaction.description,
+        "İşlem"
+      ),
+      amount: transaction.amount,
+      currentBalance,
+      thankYouMessage: requiredText(
+        thankYouMessage,
+        "İyi çalışmalar"
+      ),
+    });
 
-            return {
-              id: document.id,
-
-              type:
-                data.type === "test"
-                  ? "test"
-                  : "dayEnd",
-
-              status:
-                data.status ===
-                  "printing" ||
-                data.status ===
-                  "printed" ||
-                data.status ===
-                  "failed"
-                  ? data.status
-                  : "pending",
-
-              transactions:
-                Array.isArray(
-                  data.transactions
-                )
-                  ? data.transactions
-                  : [],
-
-              balance:
-                typeof data.balance ===
-                  "number"
-                  ? data.balance
-                  : 0,
-
-              createdAt:
-                typeof data.createdAt ===
-                  "number"
-                  ? data.createdAt
-                  : Date.now(),
-
-              printedAt:
-                typeof data.printedAt ===
-                  "number"
-                  ? data.printedAt
-                  : null,
-
-              attemptCount:
-                typeof data.attemptCount ===
-                  "number"
-                  ? data.attemptCount
-                  : 0,
-
-              lastError:
-                typeof data.lastError ===
-                  "string"
-                  ? data.lastError
-                  : "",
-            } as PrintJob;
-          }
+  const created = await runTransaction(
+    db,
+    async (firestoreTransaction) => {
+      const existingJob =
+        await firestoreTransaction.get(
+          jobReference
         );
 
-      onData(jobs);
-    },
-    onError
-  );
-}
+      if (existingJob.exists()) {
+        return false;
+      }
 
-export async function markPrintJobFailed(
-  job: PrintJob,
-  errorMessage: string
-): Promise<void> {
-  await updateDoc(
-    doc(
-      db,
-      "printJobs",
-      job.id
-    ),
-    {
-      status: "failed",
+      firestoreTransaction.set(
+        jobReference,
+        {
+          transactionId: jobId,
+          printerId: PRINTER_ID,
+          copies: 1,
+          payload,
+          status: "pending",
+          attemptCount: 0,
+          createdAt: serverTimestamp(),
+          claimedAt: null,
+          claimedBy: null,
+          deliveryOutcome: "not_started",
+          printedAt: null,
+          lastError: "",
+          createdBy,
+        }
+      );
 
-      attemptCount:
-        job.attemptCount + 1,
+      firestoreTransaction.set(
+        creationLogReference,
+        {
+          event: "job-created",
+          jobId,
+          transactionId: jobId,
+          machineId: "pwa",
+          printerId: PRINTER_ID,
+          attemptCount: 0,
+          message:
+            "Yazdırma işi PWA tarafından oluşturuldu.",
+          timestamp: serverTimestamp(),
+          createdBy,
+        }
+      );
 
-      lastError: errorMessage,
+      return true;
     }
   );
-}
 
-export async function retryPrintJob(
-  id: string
-): Promise<void> {
-  await updateDoc(
-    doc(
-      db,
-      "printJobs",
-      id
-    ),
-    {
-      status: "pending",
-      lastError: "",
-    }
-  );
-}
-
-export async function markPrintJobCompleted(
-  id: string
-): Promise<void> {
-  await updateDoc(
-    doc(
-      db,
-      "printJobs",
-      id
-    ),
-    {
-      status: "printed",
-      printedAt: Date.now(),
-      lastError: "",
-    }
-  );
+  return {
+    jobId,
+    created,
+  };
 }

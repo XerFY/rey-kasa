@@ -2,6 +2,8 @@ import {
   ArrowDownRight,
   ArrowUpRight,
   CalendarDays,
+  CalendarRange,
+  CheckCircle2,
   TrendingDown,
   TrendingUp,
   Wallet,
@@ -15,7 +17,6 @@ import {
 import "../styles/ReportsPage.css";
 
 import DayEndHistory from "../components/DayEndHistory";
-import MonthlyChart from "../components/MonthlyChart";
 import ReportExportActions from "../components/ReportExportActions";
 
 import type { DayEndRecord } from "../types/DayEndRecord";
@@ -24,7 +25,8 @@ import type { Transaction } from "../types/Transaction";
 type ReportPeriod =
   | "daily"
   | "weekly"
-  | "monthly";
+  | "monthly"
+  | "custom";
 
 type Props = {
   transactions: Transaction[];
@@ -75,10 +77,111 @@ function getMonday(
   return result;
 }
 
+function parseDateKey(
+  value: string
+): Date | null {
+  const [year, month, day] =
+    value
+      .split("-")
+      .map(Number);
+
+  if (
+    !year ||
+    !month ||
+    !day
+  ) {
+    return null;
+  }
+
+  const date = new Date(
+    year,
+    month - 1,
+    day
+  );
+
+  if (
+    date.getFullYear() !== year ||
+    date.getMonth() !==
+      month - 1 ||
+    date.getDate() !== day
+  ) {
+    return null;
+  }
+
+  return date;
+}
+
+function formatDateLabel(
+  value: string
+): string {
+  const date = parseDateKey(value);
+
+  if (!date) {
+    return "Tarih seçilmedi";
+  }
+
+  return date.toLocaleDateString(
+    "tr-TR",
+    {
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+    }
+  );
+}
+
 function getPeriodRange(
-  period: ReportPeriod
-): PeriodRange {
-  const now = new Date();
+  period: ReportPeriod,
+  currentDateKey: string,
+  customStartDate: string,
+  customEndDate: string
+): PeriodRange | null {
+  const now =
+    parseDateKey(
+      currentDateKey
+    ) ?? new Date();
+
+  if (period === "custom") {
+    const start =
+      parseDateKey(
+        customStartDate
+      );
+
+    const selectedEnd =
+      parseDateKey(
+        customEndDate
+      );
+
+    if (
+      !start ||
+      !selectedEnd ||
+      start.getTime() >
+        selectedEnd.getTime()
+    ) {
+      return null;
+    }
+
+    const end =
+      new Date(selectedEnd);
+
+    end.setDate(
+      end.getDate() + 1
+    );
+
+    const duration =
+      end.getTime() -
+      start.getTime();
+
+    return {
+      start: start.getTime(),
+      end: end.getTime(),
+      previousStart:
+        start.getTime() -
+        duration,
+      previousEnd:
+        start.getTime(),
+    };
+  }
 
   if (period === "daily") {
     const start =
@@ -297,20 +400,39 @@ function ReportsPage({
     "daily"
   );
 
+  const [
+    customStartDate,
+    setCustomStartDate,
+  ] = useState(currentDateKey);
+
+  const [
+    customEndDate,
+    setCustomEndDate,
+  ] = useState(currentDateKey);
+
   const range =
     useMemo(
       () =>
         getPeriodRange(
-          period
+          period,
+          currentDateKey,
+          customStartDate,
+          customEndDate
         ),
       [
         period,
         currentDateKey,
+        customStartDate,
+        customEndDate,
       ]
     );
 
   const reportTransactions =
     useMemo(() => {
+      if (!range) {
+        return [];
+      }
+
       return transactions.filter(
         (transaction) =>
           transaction.createdAt >=
@@ -325,6 +447,10 @@ function ReportsPage({
 
   const previousTransactions =
     useMemo(() => {
+      if (!range) {
+        return [];
+      }
+
       return transactions.filter(
         (transaction) =>
           transaction.createdAt >=
@@ -355,12 +481,27 @@ function ReportsPage({
       [previousTransactions]
     );
 
+  const customRangeError =
+    period === "custom" &&
+    !range;
+
   const periodTitle =
     period === "daily"
       ? "Bugün"
       : period === "weekly"
         ? "Bu Hafta"
-        : "Bu Ay";
+        : period === "monthly"
+          ? "Bu Ay"
+          : customStartDate ===
+              customEndDate
+            ? formatDateLabel(
+                customStartDate
+              )
+            : `${formatDateLabel(
+                customStartDate
+              )} - ${formatDateLabel(
+                customEndDate
+              )}`;
 
   return (
     <section className="reports-page">
@@ -417,7 +558,110 @@ function ReportsPage({
         >
           Aylık
         </button>
+
+        <button
+          type="button"
+          className={
+            period === "custom"
+              ? "active"
+              : ""
+          }
+          onClick={() =>
+            setPeriod("custom")
+          }
+        >
+          Tarih Seç
+        </button>
       </div>
+
+      {period === "custom" && (
+        <section className="report-custom-range">
+          <div className="report-custom-range-heading">
+            <div>
+              <span className="report-custom-range-icon">
+                <CalendarRange
+                  size={19}
+                />
+              </span>
+
+              <div>
+                <strong>
+                  Geçmiş Rapor
+                </strong>
+
+                <span>
+                  PDF veya CSV için
+                  tarih aralığını seç.
+                </span>
+              </div>
+            </div>
+
+            <small>ÖZEL</small>
+          </div>
+
+          <div className="report-date-fields">
+            <label>
+              <span>Başlangıç</span>
+
+              <input
+                type="date"
+                max={
+                  customEndDate ||
+                  currentDateKey
+                }
+                value={
+                  customStartDate
+                }
+                onChange={(event) =>
+                  setCustomStartDate(
+                    event.target.value
+                  )
+                }
+              />
+            </label>
+
+            <label>
+              <span>Bitiş</span>
+
+              <input
+                type="date"
+                min={
+                  customStartDate ||
+                  undefined
+                }
+                max={currentDateKey}
+                value={customEndDate}
+                onChange={(event) =>
+                  setCustomEndDate(
+                    event.target.value
+                  )
+                }
+              />
+            </label>
+          </div>
+
+          {customRangeError ? (
+            <p
+              className="report-date-error"
+              role="alert"
+            >
+              Geçerli bir başlangıç ve
+              bitiş tarihi seçin.
+            </p>
+          ) : (
+            <div className="report-date-ready">
+              <CheckCircle2
+                size={16}
+              />
+
+              <span>
+                Seçilen tarihler PDF ve
+                CSV dosyasına uygulanacak.
+              </span>
+            </div>
+          )}
+        </section>
+      )}
 
       <div className="report-period-heading">
         <div>
@@ -572,14 +816,11 @@ function ReportsPage({
         </div>
       </section>
 
-      <MonthlyChart
-        transactions={transactions}
-      />
-
       <section className="report-transactions">
         <h2>
-          {periodTitle} Yapılan
-          İşlemler
+          {period === "custom"
+            ? "Seçilen Tarihlerdeki İşlemler"
+            : `${periodTitle} Yapılan İşlemler`}
         </h2>
 
         {reportTransactions.length ===

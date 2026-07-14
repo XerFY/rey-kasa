@@ -81,6 +81,80 @@ button {
   cursor: pointer;
 }
 
+.app-print-feedback {
+  position: sticky;
+  top: calc(8px + env(safe-area-inset-top));
+  z-index: 55;
+
+  margin: 0 0 14px;
+  padding: 10px 12px;
+
+  border: 1px solid var(--border);
+  border-radius: 12px;
+
+  background: var(--surface);
+  color: var(--primary);
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+
+  font-size: 13px;
+  font-weight: 700;
+
+  box-shadow: var(--shadow);
+}
+
+.app-print-feedback-success {
+  border-color:
+    color-mix(
+      in srgb,
+      var(--success) 35%,
+      var(--border)
+    );
+
+  background:
+    color-mix(
+      in srgb,
+      var(--success) 10%,
+      var(--surface)
+    );
+  color: var(--success);
+}
+
+.app-print-feedback-error {
+  border-color:
+    color-mix(
+      in srgb,
+      var(--danger) 35%,
+      var(--border)
+    );
+
+  background:
+    color-mix(
+      in srgb,
+      var(--danger) 10%,
+      var(--surface)
+    );
+  color: var(--danger);
+}
+
+.app-print-feedback button {
+  flex: 0 0 auto;
+
+  width: 28px;
+  height: 28px;
+
+  border: 0;
+  border-radius: 999px;
+
+  background: transparent;
+  color: currentColor;
+
+  cursor: pointer;
+}
+
 .sync-status {
   width: fit-content;
   margin: -12px auto 18px;
@@ -306,6 +380,15 @@ button {
 
 .transaction-menu .transaction-delete-option {
   color: var(--danger);
+}
+
+.transaction-menu .transaction-print-option {
+  color: var(--primary);
+}
+
+.transaction-menu button:disabled {
+  cursor: wait;
+  opacity: 0.58;
 }
 .cash-adjust-button {
   width: 100%;

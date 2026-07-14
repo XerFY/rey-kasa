@@ -14,10 +14,7 @@ service cloud.firestore {
           "description",
           "createdAt"
         ]) &&
-        (
-          data.type == "income" ||
-          data.type == "expense"
-        ) &&
+        (data.type == "income" || data.type == "expense") &&
         data.amount is number &&
         data.amount > 0 &&
         data.amount <= 1000000000000 &&
@@ -27,43 +24,133 @@ service cloud.firestore {
         data.createdAt is number;
     }
 
+    function validPrintPayload(payload) {
+      return
+        payload is map &&
+        payload.keys().hasOnly([
+          "storeTitle",
+          "occurredAt",
+          "transactionType",
+          "description",
+          "amount",
+          "currentBalance",
+          "thankYouMessage"
+        ]) &&
+        payload.storeTitle is string &&
+        payload.storeTitle.size() >= 1 &&
+        payload.storeTitle.size() <= 80 &&
+        payload.occurredAt is number &&
+        payload.occurredAt > 0 &&
+        (payload.transactionType == "income" || payload.transactionType == "expense") &&
+        payload.description is string &&
+        payload.description.size() >= 1 &&
+        payload.description.size() <= 120 &&
+        payload.amount is number &&
+        payload.amount > 0 &&
+        payload.amount <= 1000000000000 &&
+        payload.currentBalance is number &&
+        payload.currentBalance >= -1000000000000 &&
+        payload.currentBalance <= 1000000000000 &&
+        payload.thankYouMessage is string &&
+        payload.thankYouMessage.size() >= 1 &&
+        payload.thankYouMessage.size() <= 160;
+    }
+
+    function validNewPrintJob(printJobId, data) {
+      return
+        data.keys().hasOnly([
+          "transactionId",
+          "printerId",
+          "copies",
+          "payload",
+          "status",
+          "attemptCount",
+          "createdAt",
+          "claimedAt",
+          "claimedBy",
+          "deliveryOutcome",
+          "printedAt",
+          "lastError",
+          "createdBy"
+        ]) &&
+        printJobId == data.transactionId &&
+        data.printerId == "koddata-kdp95" &&
+        data.copies == 1 &&
+        data.status == "pending" &&
+        data.attemptCount == 0 &&
+        data.createdAt == request.time &&
+        data.claimedAt == null &&
+        data.claimedBy == null &&
+        data.deliveryOutcome == "not_started" &&
+        data.printedAt == null &&
+        data.lastError == "" &&
+        data.createdBy == request.auth.uid &&
+        validPrintPayload(data.payload) &&
+        exists(/databases/$(database)/documents/transactions/$(data.transactionId));
+    }
+
+    function validCreationLog(logId, data) {
+      return
+        data.keys().hasOnly([
+          "event",
+          "jobId",
+          "transactionId",
+          "machineId",
+          "printerId",
+          "attemptCount",
+          "message",
+          "timestamp",
+          "createdBy"
+        ]) &&
+        logId == "job-created-" + data.jobId &&
+        data.event == "job-created" &&
+        data.jobId == data.transactionId &&
+        data.machineId == "pwa" &&
+        data.printerId == "koddata-kdp95" &&
+        data.attemptCount == 0 &&
+        data.message is string &&
+        data.message.size() >= 1 &&
+        data.message.size() <= 200 &&
+        data.timestamp == request.time &&
+        data.createdBy == request.auth.uid &&
+        getAfter(/databases/$(database)/documents/printJobs/$(data.jobId)).data.createdBy == request.auth.uid;
+    }
+
     match /transactions/{transactionId} {
       allow read: if signedIn();
-
-      allow create, update: if
-        signedIn() &&
-        validTransaction(request.resource.data);
-
+      allow create, update: if signedIn() && validTransaction(request.resource.data);
       allow delete: if signedIn();
     }
 
     match /dayEnds/{dayEndId} {
-      allow read, create, update:
-        if signedIn();
-
+      allow read, create, update: if signedIn();
       allow delete: if false;
     }
 
     match /settings/{settingsId} {
-      allow read, create, update:
-        if signedIn();
-
+      allow read, create, update: if signedIn();
       allow delete: if false;
     }
 
     match /auditLogs/{auditId} {
-      allow read, create:
-        if signedIn();
-
-      allow update, delete:
-        if false;
+      allow read, create: if signedIn();
+      allow update, delete: if false;
     }
 
     match /printJobs/{printJobId} {
-      allow read, create, update:
-        if signedIn();
+      allow read: if signedIn() && resource.data.createdBy == request.auth.uid;
+      allow create: if signedIn() && validNewPrintJob(printJobId, request.resource.data);
+      allow update, delete: if false;
+    }
 
-      allow delete: if signedIn();
+    match /printLogs/{logId} {
+      allow read: if false;
+      allow create: if signedIn() && validCreationLog(logId, request.resource.data);
+      allow update, delete: if false;
+    }
+
+    match /bridgeStatus/{statusId} {
+      allow read, write: if false;
     }
 
     match /{document=**} {
